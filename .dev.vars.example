@@ -1,0 +1,13 @@
+# Copy this file to .dev.vars (never commit .dev.vars) and paste your HubSpot private app token.
+# HubSpot → Settings → Integrations → Private Apps → Create app. Scopes:
+#   crm.objects.contacts.read, crm.objects.contacts.write  (wishlist feed, find/create seller contacts, tasks)
+#   crm.objects.deals.read                                  (link tasks to the buyer's deals)
+#   If HubSpot lists separate task scopes, tick their read and write too.
+HUBSPOT_ACCESS_TOKEN=
+# Team admin (/admin) password, at least 12 characters. Everyone on the team uses it with their own name.
+ADMIN_PASSWORD=
+# Extra HubSpot scopes needed by the admin: crm.schemas.contacts.write, crm.schemas.deals.write, crm.objects.deals.write
+# Optional: owners who receive seller-response tasks (default: Khadeja Hesham 33163566, Khadija Hesham 1824975088).
+# HUBSPOT_TASK_OWNER_IDS=33163566,1824975088
+# Optional: any random string; changes the public BM-xxxx request IDs if set.
+# WISHLIST_ID_SALT=
