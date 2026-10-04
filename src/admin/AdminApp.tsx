@@ -5,6 +5,7 @@ import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,
 import {label} from '../content';
 import {propertyTypes,type Demand} from '../data';
 import './admin.css';
+import ThemeToggle from '../ThemeToggle';
 
 type Status='pending'|'approved'|'changes_requested'|'rejected';
 type Buyer={contactId:string;ref:string;hubspotUrl:string;name:string;phone:string;email:string;broker:{company:string}|null;fromWebsite:boolean;createdAt?:string|null;status:Status;warning:string|null;comment:string;reviewedBy:string;reviewedAt:string;
@@ -37,7 +38,7 @@ export default function AdminApp(){
  return <div className="adm">
   <header className="adm-top"><span className="adm-brand" dir="ltr">belmazad<b>.com</b> <small>team admin</small></span>
    <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button></nav>
-   <span className="adm-user"><LockKeyhole size={14}/>{me.user.name}<button className="adm-link" onClick={()=>api('/api/admin/session',{method:'DELETE'}).then(check)}><LogOut size={15}/>Log out</button></span></header>
+   <ThemeToggle label="Switch light and dark mode"/><span className="adm-user"><LockKeyhole size={14}/>{me.user.name}<button className="adm-link" onClick={()=>api('/api/admin/session',{method:'DELETE'}).then(check)}><LogOut size={15}/>Log out</button></span></header>
   {tab==='buyers'?<Buyers onAuthLost={check}/>:<Sellers onAuthLost={check}/>}
  </div>;
 }

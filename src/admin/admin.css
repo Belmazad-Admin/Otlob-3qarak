@@ -13,7 +13,7 @@
 .adm-search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding-inline:10px;color:var(--muted)}.adm-search input{border:0;padding:9px 0;background:transparent}
 .adm-select{width:auto;padding:8px 10px;font-size:13px}
 .adm-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;white-space:nowrap}.adm-btn:hover{border-color:var(--blue)}
-.adm-btn.primary{background:var(--blue);border-color:var(--blue);color:var(--white)}.adm-btn.approve{background:var(--green);border-color:var(--green);color:var(--white)}.adm-btn.reject{color:var(--error);border-color:var(--error)}
+.adm-btn.primary{background:var(--blue-fill);border-color:var(--blue-fill);color:var(--on-fill)}.adm-btn.approve{background:var(--green-fill);border-color:var(--green-fill);color:var(--on-fill)}.adm-btn.reject{color:var(--error);border-color:var(--error)}
 .adm-link{display:inline-flex;align-items:center;gap:5px;background:none;border:0;color:var(--blue);font-size:13px;font-weight:600;padding:2px}
 .adm-split{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(0,1.4fr);gap:16px;align-items:start}
 .adm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:calc(100vh - 170px);overflow:auto}
@@ -41,3 +41,5 @@
 .adm-table{width:100%;border-collapse:collapse;font-size:13px}.adm-table th{position:sticky;top:0;background:var(--surface);text-align:start;font-size:11px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
 .adm-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}.adm-table td small{color:var(--muted)}.adm-table tr{cursor:pointer}.adm-table tbody tr:hover,.adm-table tr.on{background:var(--pale-blue)}
 @media(max-width:900px){.adm-split{grid-template-columns:1fr}.adm-list,.adm-table-wrap{max-height:none}.adm-top{flex-wrap:wrap;padding:10px 14px;gap:10px}.adm-main{padding:14px}.adm-private{grid-template-columns:1fr}}
+
+.adm-top .theme-toggle{margin-inline-start:auto}.adm-top .theme-toggle+.adm-user{margin-inline-start:0}
