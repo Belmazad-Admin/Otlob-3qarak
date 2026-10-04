@@ -14,7 +14,7 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 - Arabic-first RTL and English LTR; language toggle updates document direction. All bilingual strings and option labels live in `src/content.ts`.
 - Brand name is lowercase `belmazad.com`. Preserve its primary blue #0077B5, orange #F56E3D, supporting neutral palette, and Arabic tagline `السوق في إيدك.`. CSS tokens live in `src/styles.css`; do not hardcode new colours in components. Licensed Neue Haas Grotesk is for future production; free stand-ins are in CSS.
 - Feed posts mean *buyer requests*, never properties for sale. Keep requests anonymised; never expose contact details on public cards or matching results.
-- Buy only. Buyer flow has eight stages: goal, type, multi-area location, budget, requirements, must-haves, notes/contact, public review. Land and other non-residential types hide bedrooms, bathrooms and floor.
+- Buy only. Buyer flow has seven stages (the one-option "goal" stage was removed in October 2026): type, multi-area location, budget, requirements, must-haves, notes/contact, public review. Land and other non-residential types hide bedrooms, bathrooms and floor.
 - Mobile layout has a sticky action bar and a full-height wizard. Keyboard focus and reduced-motion rules matter.
 - The buyer request feed is live from HubSpot (see "HubSpot wishlist feed" in `HANDOFF.md`) when `HUBSPOT_ACCESS_TOKEN` is set; the sample requests in `src/data.ts` appear only when it is not. Never send HubSpot names, phones, e-mails, owners, record IDs or the raw `additional_requirments` note to the browser — only the fields produced by `src/hubspot/wishlist.ts`.
 - Seller matching ranks those buyer requests with a deterministic front-end score, not a real AI service.
@@ -35,7 +35,7 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 - `HANDOFF.md` — integration notes and demo limits.
 
 ## Practical cautions
-- The `public/property.webp` image is illustrative and depicts a villa in Mallorca. Its reuse rights were not established; replace it with an approved Belmazad asset before production.
+- Photos in `public/photos/` are free Unsplash stock chosen by the owner (credits in `HANDOFF.md`, section "Photos"). The old Mallorca photo was removed because its reuse rights were never established.
 - The text logo is a prototype; replace with approved logo files and licensed fonts before production.
 - Apply server-side validation and moderation before publishing free-text buyer notes. Keep private contact fields separate from the public request model.
 - The site's existing private URL may require the original ChatGPT account. This archive is the transferable source.

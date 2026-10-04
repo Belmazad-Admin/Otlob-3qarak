@@ -78,16 +78,17 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
    - header with a phone menu
    - hero with real HubSpot numbers instead of made-up ones; demo bar folded in
    - cleaner request cards; fake controls removed, filters and search working
-   - wizard: per-field error messages, sticky Next on phones, and the goal step removed if the owner agrees
+   - wizard: per-field error messages, sticky Next on phones. The goal step is already removed (4 October 2026); the wizard now has 7 steps
    - "عندي العقار ده" directly on match results
    - fix the offer form wording
    - polished dialogs, FAQ, footer and mobile, with photos
 3. **Admin dashboard** restyled with the same system.
 4. **Testing:** every flow (buyer request → approve, offer, keep looking, broker, language, theme), phone, tablet and desktop, keyboard and reduced motion; build and commit.
 
-**Waiting on the owner before Phase 2:**
-1. Remove the wizard's "goal" step ("خلّينا نبدأ بهدفك", one button "عايز أشتري عقار")? It was explained to the owner; no answer yet. `CLAUDE.md` still says 8 steps, so update it if the owner agrees.
-2. Photo source: (a) Belmazad's own photos (which folder?), or (b) free licensed stock photos picked and shown to the owner first. Downloading needs the owner's OK. The current Mallorca photo isn't cleared for reuse.
+**Owner decisions for Phase 2 (4 October 2026):**
+1. **Goal step: remove.** Done: the wizard opens on "property type" and shows "Step 1 of 7". `CLAUDE.md` and `HANDOFF.md` updated.
+2. **Photos: free licensed stock.** A shortlist is shown to the owner first; nothing is downloaded until the owner picks. The current Mallorca photo isn't cleared for reuse and will be replaced.
+   - Owner picked H3 (El Gouna homes, buyer hero), S1 (modern villa, seller banner) and E2 (apartment balconies, supporting). Saved in `public/photos/`, credits in `HANDOFF.md`. S1 already replaces the Mallorca photo, which was deleted. H3 and E2 get placed during Phase 2.
 
 ## Planned, not started: easy buyer/seller sign-in
 The owner asked for easy sign-in, asked for only when submitting. Proposed plan:

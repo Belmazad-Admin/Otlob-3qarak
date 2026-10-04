@@ -4,7 +4,7 @@ Arabic-first, English-toggle front-end reference. React 19 + TypeScript + Tailwi
 
 ## Source map
 - `app/page.tsx`: preview redirect to `/request-property`.
-- `src/Marketplace.tsx`: demand feed, detail/response dialogs, 8-step buyer wizard, seller matching, confirmation.
+- `src/Marketplace.tsx`: demand feed, detail/response dialogs, 7-step buyer wizard (internal step numbers run 1–7, matching `validateStep` in `src/data.ts` and the server re-check), seller matching, confirmation.
 - `src/content.ts`: Arabic/English interface dictionary and translated option labels.
 - `src/styles.css`: semantic palette, glass surfaces, responsive rules, motion and isolated Arabic/Latin font stacks. Replace `--font-brand`, `--font-latin`, and Arabic font with the licensed production assets as appropriate.
 - `src/data.ts`: typed `PropertyRequest`, validation, options, sample demand, deterministic matching function.
@@ -123,5 +123,13 @@ On a live post, "عندي عقار مناسب" submits the seller's details, are
 - **Rejected owners:** if HubSpot rejects an owner (for example a deactivated user; Khadija Hesham 1824975088 is currently inactive and not offered in HubSpot's task "Assigned to" list), that owner is skipped for an hour and the other owners still get their task. The rejection is logged.
 - **Sample posts:** posts from the sample data (no token configured) keep the local demo acknowledgement and send nothing.
 
-## Image
-`public/property.webp`: illustrative villa photograph, actual location Mallorca, from https://loveshack.ev-mallorca.com/ . Direct source: https://loveshack.ev-mallorca.com/hubfs/LS%20Loveshack%2011/LS%20Slider/LS11_SLIDER_01.webp . It is not an Egyptian listing. Replace with a licensed Belmazad property asset for production; no reuse license was established.
+## Photos
+Chosen by the owner on 4 October 2026 from Unsplash. The Unsplash License allows free commercial use without attribution; credit is kept here anyway. Files are WebP copies resized by Unsplash's image service.
+
+| File | Use | Photo | Photographer |
+|---|---|---|---|
+| `public/photos/seller-villa.webp` | Seller banner (seller view) | https://unsplash.com/photos/hHz4yrvxwlA | Avi Werde |
+| `public/photos/hero-el-gouna.webp` | Buyer hero (to be placed in redesign Phase 2) | https://unsplash.com/photos/3VsSOtf26j0 · El Gouna, Egypt | Levi Morsy |
+| `public/photos/apartments.webp` | Supporting image (to be placed in Phase 2) | https://unsplash.com/photos/AHzHbWmNaU4 | CodeShady |
+
+The earlier `public/property.webp` (a Mallorca villa with no established reuse rights) was removed.
