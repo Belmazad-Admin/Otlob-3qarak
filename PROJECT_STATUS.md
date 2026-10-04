@@ -74,9 +74,9 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
 
 **Phases** (show the owner after each, then commit):
 1. **Design system and dark mode.** ✅ Done (`a0bee38`).
-2. **Public page and journeys.** Not started. Covers:
-   - header with a phone menu
-   - hero with real HubSpot numbers instead of made-up ones; demo bar folded in
+2. **Public page and journeys.** In progress. Covers:
+   - header with a phone menu ✅ (4 October 2026; built and checked, not yet tested by the owner)
+   - hero with real HubSpot numbers instead of made-up ones; demo bar folded in ✅ (same)
    - cleaner request cards; fake controls removed, filters and search working
    - wizard: per-field error messages, sticky Next on phones. The goal step is already removed (4 October 2026); the wizard now has 7 steps
    - "عندي العقار ده" directly on match results
@@ -114,6 +114,6 @@ The owner asked for easy sign-in, asked for only when submitting. Proposed plan:
 ## Known quirks
 - HubSpot contact property `additional_requirments` rejects special characters, so the website writes a plain letters/numbers version.
 - `scripts/hubspot-setup.mjs` (safe to re-run) creates the HubSpot properties and pipeline. `scripts/hubspot-seed-statuses.mjs` was already run once (5 Pending / 80 Approved / 11 Rejected).
-- Lint has 4 issues inherited from the original zip (in `Marketplace.tsx`); typecheck and build pass.
+- Lint has 4 issues inherited from the original zip (in `Marketplace.tsx`) plus one "use next/image" hint for the hero photo, the same hint the seller photo already had; typecheck and build pass.
 - The browser preview pane can't show phone layouts reliably; check on a real phone.
 - In a hidden or background preview tab, the theme's colour fade can stall and leave the page background looking unchanged. In a visible browser it switches normally. The colour values themselves are correct.

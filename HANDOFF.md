@@ -96,6 +96,13 @@ The buyer request wizard (contact step), the seller offer form and "Let us keep 
 - **Admin:** shows a "Broker · company" badge on requests and offers. Broker requests submitted through the website aren't flagged as auto-excluded.
 - **Later:** broker accounts and dashboards belong to the account phase, so they're not built yet.
 
+## Header menu and hero (redesign Phase 2)
+- **Phone menu:** below 800 px the header links are replaced by a menu button that opens a glass panel with the section links and the main action. Below 600 px the theme and language buttons move into the panel too. The buyer/seller switch always stays in the header bar. The panel closes on Escape (focus returns to the button), on a tap outside the header, and when a link is chosen; menu links scroll to their section themselves.
+- **Hero:** the El Gouna photo (`public/photos/hero-el-gouna.webp`) with two cards on top, both from real data:
+  - the number of active buyer requests (the live HubSpot feed, or the sample set in demo mode) and when it was last updated, or the demo label;
+  - the newest request (type, areas, budget, size). Tapping it opens the usual request details.
+- The old made-up scene ("12 matches", "92%", "4,000 m²", "50–70") and the separate demo bar under the hero were removed.
+
 ## Buyer and seller views
 `/request-property` has two views, switched by "بتشتري | بتبيع" in the header. `?for=sellers` opens the seller view directly, for ads and WhatsApp links.
 
