@@ -38,6 +38,21 @@ The "طلبات المشترين" feed and the seller matching read real buyer r
 - **Setup:** create a HubSpot private app with the scopes listed in `.dev.vars.example`. Copy that file to `.dev.vars` and paste the token (local dev); in production, set `HUBSPOT_ACCESS_TOKEN` as a secret.
 - **Known limits:** area, district and budget figures come from automatic parsing of informal notes, so some posts show "غير محدد" or miss a detail. Districts outside the dictionary fall back to the governorate. Staff can improve a post by writing clear figures in the note, e.g. "2000 meter", "budget 30 million", "in gamalon".
 
+## Themes and design system
+- **Light by default:** the site always opens in light. The sun/moon button (`src/ThemeToggle.tsx`, in the public header and the admin header) switches `<html data-theme>` between `light` and `dark` and saves the choice in `localStorage` under `bm-theme`.
+- **No flash:** `themeBootScript` (`src/theme.ts`), inlined in `<head>` by `app/layout.tsx`, re-applies a saved dark choice before first paint. `<html>` uses `suppressHydrationWarning` for that attribute only.
+- **Colour tokens** (`src/styles.css`): components use only the existing tokens (`--white` = card surface, `--surface`, `--ink`, `--muted`, `--line`, `--blue`, `--pale-blue`, …). The "Design system layer" at the end of the file redefines them under `:root[data-theme=dark]`, so new components get dark mode automatically if they use tokens.
+  - Never hardcode colours in components.
+- **Fixed roles that stay the same in both themes:**
+  - `--blue-fill` and `--green-fill`: button and badge fills
+  - `--on-fill`: white text on those fills
+  - `--on-orange`: dark ink text on the orange CTA, kept for contrast
+  - `--page`: page background
+- **Shared component rules:** button states (hover lift, press, focus ring `--ring`), field focus, glass blur on `.nav`, `.glass` and `.mobile-action`, card radius and shadow scale (`--radius-sm/md/lg`, `--shadow-sm/md`), the `.theme-toggle` styles, and reduced-motion overrides.
+- **Fonts:** Arabic `--font-arabic` is IBM Plex Sans Arabic; Latin `--font-latin` is DM Sans. Both are loaded from Google Fonts at the top of `src/styles.css`. Replace them with the licensed brand font (Neue Haas Grotesk) at production.
+- **Admin:** `src/admin/admin.css` uses the same tokens, so it follows the theme too.
+- The full redesign plan and its phases are in `PROJECT_STATUS.md`.
+
 ## Team admin (`/admin`)
 The admin is a private team page; the HubSpot data it shows is never sent to the public site.
 
