@@ -6,7 +6,7 @@ Arabic-first, English-toggle front-end reference. React 19 + TypeScript + Tailwi
 - `app/page.tsx`: preview redirect to `/request-property`.
 - `src/Marketplace.tsx`: demand feed, detail/response dialogs, 7-step buyer wizard (internal step numbers run 1–7, matching `validateStep` in `src/data.ts` and the server re-check), seller matching, confirmation.
 - `src/content.ts`: Arabic/English interface dictionary and translated option labels.
-- `src/styles.css`: semantic palette, glass surfaces, responsive rules, motion and isolated Arabic/Latin font stacks. Replace `--font-brand`, `--font-latin`, and Arabic font with the licensed production assets as appropriate.
+- `src/styles.css`: semantic palette, responsive rules, motion, font stacks, and the Swiss layers at the end (see "Swiss design"). Replace `--font-brand`, `--font-latin`, and Arabic font with the licensed production assets as appropriate.
 - `src/data.ts`: typed `PropertyRequest`, validation, options, sample demand, deterministic matching function.
 - `src/api.ts`: `submitRequest()` is the future buyer API boundary. Returns a demo reference without transmitting or storing contact information.
 
@@ -46,10 +46,10 @@ The "طلبات المشترين" feed and the seller matching read real buyer r
 - **Fixed roles that stay the same in both themes:**
   - `--blue-fill` and `--green-fill`: button and badge fills
   - `--on-fill`: white text on those fills
-  - `--on-orange`: dark ink text on the orange CTA, kept for contrast
+  - `--on-orange`: dark ink text on orange fields, kept for contrast (white on orange is too low-contrast)
   - `--page`: page background
 - **Shared component rules:** button states (hover lift, press, focus ring `--ring`), field focus, glass blur on `.nav`, `.glass` and `.mobile-action`, card radius and shadow scale (`--radius-sm/md/lg`, `--shadow-sm/md`), the `.theme-toggle` styles, and reduced-motion overrides.
-- **Fonts:** Arabic `--font-arabic` is IBM Plex Sans Arabic; Latin `--font-latin` is DM Sans. Both are loaded from Google Fonts at the top of `src/styles.css`. Replace them with the licensed brand font (Neue Haas Grotesk) at production.
+- **Fonts:** body text uses IBM Plex Sans Arabic (`--font-arabic`) and Inter (`--font-latin`); headings and big numbers use Alexandria (`--font-display-ar`) and Archivo (`--font-display`). Both are loaded from Google Fonts at the top of `src/styles.css`. Replace them with the licensed brand font (Neue Haas Grotesk) at production.
 - **Admin:** `src/admin/admin.css` uses the same tokens, so it follows the theme too.
 - The full redesign plan and its phases are in `PROJECT_STATUS.md`.
 
@@ -97,11 +97,30 @@ The buyer request wizard (contact step), the seller offer form and "Let us keep 
 - **Later:** broker accounts and dashboards belong to the account phase, so they're not built yet.
 
 ## Header menu and hero (redesign Phase 2)
-- **Phone menu:** below 800 px the header links are replaced by a menu button that opens a glass panel with the section links and the main action. Below 600 px the theme and language buttons move into the panel too. The buyer/seller switch always stays in the header bar. The panel closes on Escape (focus returns to the button), on a tap outside the header, and when a link is chosen; menu links scroll to their section themselves.
-- **Hero:** the El Gouna photo (`public/photos/hero-el-gouna.webp`) with two cards on top, both from real data:
-  - the number of active buyer requests (the live HubSpot feed, or the sample set in demo mode) and when it was last updated, or the demo label;
-  - the newest request (type, areas, budget, size). Tapping it opens the usual request details.
-- The old made-up scene ("12 matches", "92%", "4,000 m²", "50–70") and the separate demo bar under the hero were removed.
+- **Phone menu:** below 800 px the header links are replaced by a menu button that opens a panel with the requests link and the main action. Below 600 px the theme and language buttons move into the panel too. The buyer/seller switch always stays in the header bar. The panel closes on Escape (focus returns to the button), on a tap outside the header, and when a link is chosen; menu links scroll to their section themselves.
+- **Hero:** replaced by the photo hero and finder (see "Photo hero, finder and tiles"). No freshness claims such as "right now"; request ages are real.
+- The old made-up scene ("12 matches", "92%", "4,000 m²", "50–70"), the separate demo bar and the hero photo were removed.
+
+## Photo hero, finder and tiles (October 2026, modelled on homes.com)
+- **Header** floats transparent over the hero photo (white logo and links, glass buttons) and turns solid once the page scrolls (`solid` class, set by a scroll listener in `Marketplace.tsx`).
+- **Hero:** full-width photo of Talaat Harb Square, Cairo, at dusk, with a dark gradient, centred headline and intro, and a glass **finder** with a thin cyan-blue-orange gradient edge. Its tabs are the buyer/seller switch. Type and area pre-fill the next step: buyers go to the request wizard at the first step still missing (budget when both are chosen), sellers go to the matching tool. Under it: the live count of active requests (or the demo label) and the trust line.
+- **Photo tiles** overlap the bottom of the hero: Residential, Commercial, and Land and industrial with live request counts (a tap filters the feed by that category and shows a removable chip), plus a main-action tile.
+- **Newest buyer requests** (buyer view only): the four newest real requests that state a size or budget, as cards with a category colour on top. Sellers get the full feed right after the tiles instead.
+- Colours for the photo overlays and glass (`--photo-shade`, `--glass-fill`, `--fx-cyan`, …) are tokens in the "Futuristic layer" at the end of `src/styles.css`.
+
+## Property icons (October 2026)
+- `src/PropertyIcon.tsx`: one frosted-glass icon per property type, approved by the owner. Each icon is a solid back shape, a frosted front shape (the back shape shows through blurred) and white details, drawn as inline SVG.
+- Colours come from the category tokens (`--cat-home`, `--cat-business`, `--cat-land` and their `-tint` versions) via `--pi-main` and `--pi-tint` in `src/styles.css`; the category itself comes from `catOf()` and `TYPE_GROUPS` in `src/data.ts`.
+- Shown on the wizard's type chips, the feed filter chips, request cards, newest-request cards, seller match results and the admin public-post preview. Always next to the text label; the icons are decorative (`aria-hidden`).
+
+## Swiss design (October 2026)
+- **One primary button:** solid brand blue (`--blue-fill`), white text, no shadow; hover darkens to `--blue-fill-hover`. Used for every main action (`.button.primary`).
+- **No decoration without information:** no pulsing dots, eyebrow labels above headings, glass blur, glows, timeline line or divider lines between sections; headings are left-aligned. The "How it works" section and its menu link were removed (the wizard already shows "Step 1 of 7").
+- **Colour fields:** orange hero count block, blue wizard intro panel, sand feed band (`--sand`), blue matching section, navy footer with an oversized wordmark, a thin orange line on top of the header. Full-width bands use a box-shadow and clip-path trick so the content stays on the grid.
+- **Category colour:** request cards (and hero requests) get `data-cat` from `catOf()` in `src/Marketplace.tsx`, giving a colour edge: blue residential, orange commercial, green land and industrial.
+- **Wizard:** property types are text chips in three groups (Residential; Commercial; Land and industrial), defined by `TYPE_GROUPS`. Retail and "commercial property" stay separate because they map to different HubSpot values. On phones the Back/Next bar sticks above the bottom action bar.
+- **Feed:** areas are joined with a comma (an area label itself reads "governorate · district"); missing size or budget shows small and grey; type chips wrap instead of scrolling.
+- **Copy:** fragment-style lines were replaced with plain sentences ("What buyers are looking for right now", "FAQ", "Your request was sent."). The brand tagline "السوق في إيدك." stays in the footer, as the brand rules require.
 
 ## Request cards and feed (redesign Phase 2)
 - **Cards** show "Wanted to buy", the type and areas, the request's age and its BM reference, size, budget and feature chips. The "Anonymous buyer" line, the per-card "Active request" badge, the bookmark icon and the decorative response counts were removed (live requests never had response counts). The admin's public-post preview uses the same layout.
@@ -113,8 +132,8 @@ The buyer request wizard (contact step), the seller offer form and "Let us keep 
 `/request-property` has two views, switched by "بتشتري | بتبيع" in the header. `?for=sellers` opens the seller view directly, for ads and WhatsApp links.
 
 - **Seller view:** wording from `sellerCopy` in `src/content.ts`, which overrides the buyer text; "serious buyers / مشترين جادين" is the term for the buyer pool.
-  - Section order: hero (with the live count of requests), live requests, how it works, matching tool ("لاقي مشتري عقارك"), seller banner, seller FAQ.
-- **Buyer view:** hero, how it works, request wizard, live requests (its side card switches to the seller view), buyer FAQ.
+  - Section order: hero with finder, photo tiles, live requests, matching tool ("لاقي مشتري عقارك"), seller banner, seller FAQ.
+- **Buyer view:** hero with finder, photo tiles, newest requests, request wizard, live requests (its side panel switches to the seller view), buyer FAQ.
 - **No unconfirmed claims** in seller copy: no "free", "qualified" or response-time promises.
 
 ## "Let us keep looking" (seller, no match)
@@ -142,7 +161,11 @@ Chosen by the owner on 4 October 2026 from Unsplash. The Unsplash License allows
 | File | Use | Photo | Photographer |
 |---|---|---|---|
 | `public/photos/seller-villa.webp` | Seller banner (seller view) | https://unsplash.com/photos/hHz4yrvxwlA | Avi Werde |
-| `public/photos/hero-el-gouna.webp` | Buyer hero (to be placed in redesign Phase 2) | https://unsplash.com/photos/3VsSOtf26j0 · El Gouna, Egypt | Levi Morsy |
-| `public/photos/apartments.webp` | Supporting image (to be placed in Phase 2) | https://unsplash.com/photos/AHzHbWmNaU4 | CodeShady |
+| `public/photos/hero-el-gouna.webp` | Main-action photo tile ("اطلب عقارك" / "لاقي مشتري عقارك") | https://unsplash.com/photos/3VsSOtf26j0 · El Gouna, Egypt | Levi Morsy |
+| `public/photos/apartments.webp` | Residential photo tile | https://unsplash.com/photos/AHzHbWmNaU4 | CodeShady |
+
+| `public/photos/hero-cairo-downtown.webp` | Hero background (Talaat Harb Square, downtown Cairo, at dusk) | Supplied by the owner on 5 October 2026; source and licence still to confirm before launch | — |
+| `public/photos/tile-commercial-cairo.webp` | Commercial photo tile | https://unsplash.com/photos/7z-qKf7lzxQ · Cairo, Egypt | Ali Othman |
+| `public/photos/tile-land-desert.webp` | Land and industrial photo tile | https://unsplash.com/photos/8Znj1KW93f4 · Egypt | Veronika Biró |
 
 The earlier `public/property.webp` (a Mallorca villa with no established reuse rights) was removed.

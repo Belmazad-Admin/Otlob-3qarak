@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home} from 'lucide-react';
 import {label} from '../content';
+import PropertyIcon from '../PropertyIcon';
 import {propertyTypes,type Demand} from '../data';
 import './admin.css';
 import ThemeToggle from '../ThemeToggle';
@@ -132,11 +133,11 @@ function BuyerDetail({b,options,onChanged,onAuthLost}:{b:Buyer;options:{location
 // Mirrors the public request card markup and styles, so the preview matches the website.
 function PublicCard({d,lang}:{d:Demand;lang:'ar'|'en'}){
  const l=(k:string)=>label(k,lang),num=(n:number)=>new Intl.NumberFormat(lang==='ar'?'ar-EG':'en-EG').format(n),m=(n:number)=>num(n/1e6);
- const t=lang==='ar'?{wanted:'مطلوب للشراء',size:'المساحة',budget:'الميزانية',sqm:'م²',million:'مليون جنيه',ns:'غير محدد',around:'حوالي',upTo:'حتى',above:'أكثر من',open:'مفتوحة',range:'نطاق'}:{wanted:'WANTED TO BUY',size:'Area',budget:'Budget',sqm:'m²',million:'M EGP',ns:'Not specified',around:'Around',upTo:'Up to',above:'Above',open:'Open',range:'Range'};
+ const t=lang==='ar'?{wanted:'مطلوب للشراء',size:'المساحة',budget:'الميزانية',sqm:'م²',million:'مليون جنيه',ns:'غير محدد',around:'حوالي',upTo:'حتى',above:'أكثر من',open:'مفتوحة',range:'نطاق'}:{wanted:'Wanted to buy',size:'Area',budget:'Budget',sqm:'m²',million:'M EGP',ns:'Not specified',around:'Around',upTo:'Up to',above:'Above',open:'Open',range:'Range'};
  const size=!d.sizeMin?t.ns:d.sizeMin===d.sizeMax?num(d.sizeMin):`${num(d.sizeMin)}–${num(d.sizeMax)}`;
  const budget=d.approx?(d.min===d.max?`${t.around} ${m(d.min)}`:`${m(d.min)}–${m(d.max)}`):d.band==='band_open'?t.open:!d.max?`${t.above} ${m(d.min)}`:!d.min&&d.band?`${t.upTo} ${m(d.max)}`:`${m(d.min)}–${m(d.max)}`;
- return <article className="demand-card" dir={lang==='ar'?'rtl':'ltr'} lang={lang}><div className="post-head"><span className="avatar"><Home size={20}/></span><div><span className="wanted">{t.wanted}</span><h3>{l(d.type)} <span className="location-inline">/ {d.locations.map(l).join(' • ')}</span></h3><span className="post-when"><bdi>{d.id}</bdi></span></div></div>
-  <div className="post-stats"><div><span>{t.size}</span><strong dir="ltr">{size} {!!d.sizeMin&&<small>{t.sqm}</small>}</strong></div><div><span>{t.budget}</span><strong>{budget} {d.band!=='band_open'&&<small>{t.million}</small>}</strong>{d.approx&&d.band&&<small className="budget-band">{t.range}: {l(d.band)}</small>}</div></div>
+ return <article className="demand-card" dir={lang==='ar'?'rtl':'ltr'} lang={lang}><div className="post-head"><PropertyIcon type={d.type} size={48} className="post-icon"/><div><span className="wanted">{t.wanted}</span><h3>{l(d.type)}</h3><p className="post-places">{d.locations.map(l).join(lang==='ar'?'، ':', ')}</p><span className="post-when"><bdi>{d.id}</bdi></span></div></div>
+  <div className="post-stats"><div><span>{t.size}</span>{d.sizeMin?<strong dir="ltr">{size} <small>{t.sqm}</small></strong>:<span className="value-missing">{t.ns}</span>}</div><div><span>{t.budget}</span>{d.band==='band_open'?<span className="value-missing">{t.open}</span>:<strong>{budget} <small>{t.million}</small></strong>}{d.approx&&d.band&&<small className="budget-band">{t.range}: {l(d.band)}</small>}</div></div>
   {!!d.features.length&&<div className="chips">{d.features.map(x=><span key={x}>{l(x)}</span>)}</div>}</article>;
 }
 

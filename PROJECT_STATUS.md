@@ -40,7 +40,8 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 - **Admin login:** a shared team password plus the person's name. Production plan: Cloudflare Access (@belmazad.com, 2FA) in front of `/admin`.
 - **Brokers:** an "أنا وسيط عقاري (بروكر)" checkbox plus brokerage name in all three forms → User Type = Broker, Company = brokerage. Broker accounts and dashboards are a later phase.
 - **Design (redesign, October 2026):**
-  - Premium "liquid glass" look on the existing brand colours.
+  - **Homes.com-style structure with a futuristic finish (5 October 2026):** full-width dusk photo hero with the header floating over it, a glass finder (buying/selling tabs, type, area) that pre-fills the wizard or the matching tool, photo tiles per category with live counts, and a "Newest buyer requests" row. New Unsplash photos are credited in `HANDOFF.md`.
+  - **Swiss design (5 October 2026), replacing the earlier "liquid glass" look.** Big display type (Archivo for English, Alexandria for Arabic headings), solid brand-colour fields (orange count block in the hero, blue wizard panel, sand feed band, blue matching section, navy footer), a colour edge on request cards by category, one solid-blue primary button, no glows, pulsing dots, eyebrow labels or "How it works" section. The hero itself was later replaced by the photo hero above.
   - Arabic font: **IBM Plex Sans Arabic**.
   - The site **always opens in light mode**, with a sun/moon toggle for dark mode; a visitor's choice is remembered.
   - The owner wants **real photos** used (source still open, see below).
@@ -88,7 +89,7 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
 **Owner decisions for Phase 2 (4 October 2026):**
 1. **Goal step: remove.** Done: the wizard opens on "property type" and shows "Step 1 of 7". `CLAUDE.md` and `HANDOFF.md` updated.
 2. **Photos: free licensed stock.** A shortlist is shown to the owner first; nothing is downloaded until the owner picks. The current Mallorca photo isn't cleared for reuse and will be replaced.
-   - Owner picked H3 (El Gouna homes, buyer hero), S1 (modern villa, seller banner) and E2 (apartment balconies, supporting). Saved in `public/photos/`, credits in `HANDOFF.md`. S1 already replaces the Mallorca photo, which was deleted. H3 and E2 get placed during Phase 2.
+   - Owner picked H3 (El Gouna homes; now the main-action photo tile), S1 (modern villa, seller banner) and E2 (apartment balconies, supporting). Saved in `public/photos/`, credits in `HANDOFF.md`. S1 already replaces the Mallorca photo, which was deleted. H3 and E2 get placed during Phase 2.
 
 ## Planned, not started: easy buyer/seller sign-in
 The owner asked for easy sign-in, asked for only when submitting. Proposed plan:
@@ -114,7 +115,7 @@ The owner asked for easy sign-in, asked for only when submitting. Proposed plan:
 ## Known quirks
 - HubSpot contact property `additional_requirments` rejects special characters, so the website writes a plain letters/numbers version.
 - `scripts/hubspot-setup.mjs` (safe to re-run) creates the HubSpot properties and pipeline. `scripts/hubspot-seed-statuses.mjs` was already run once (5 Pending / 80 Approved / 11 Rejected).
-- Lint: only two "use next/image" hints remain (hero and seller photos; the site serves plain images). The issues inherited from the original zip were fixed in Phase 2. Typecheck and build pass.
+- Lint: only "use next/image" hints remain (hero, tiles and seller photos; the site serves plain images). The issues inherited from the original zip were fixed in Phase 2. Typecheck and build pass.
 - Don't run `pnpm build` while the dev server is running: it breaks the dev server (every page returns "internal error"). Stop the preview, build, then start it again.
 - The browser preview pane can't show phone layouts reliably; check on a real phone.
 - In a hidden or background preview tab, the theme's colour fade can stall and leave the page background looking unchanged. In a visible browser it switches normally. The colour values themselves are correct.

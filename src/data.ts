@@ -5,6 +5,11 @@ export const features=['finished','sea','parking','compound','ready','installmen
 export const governorates:Record<string,string>={zayed:'giza',october:'giza',gamalon:'giza',hadayekoctober:'giza',dokki:'giza',mohandessin:'giza',haram:'giza',newcairo:'cairo',maadi:'cairo',heliopolis:'cairo',nasrcity:'cairo',zamalek:'cairo',shorouk:'cairo',badr:'cairo',madinaty:'cairo',capital:'cairo',shoubra:'cairo',tenthramadan:'sharkia',belbeis:'sharkia',coast:'matrouh',alex:'alexandria',sokhna:'suez',sahlhasheesh:'redsea',somabay:'redsea',makadi:'redsea',damanhour:'beheira',mansoura:'dakahlia'};
 export const locationMatches=(wanted:string[],location:string)=>wanted.includes(location)||wanted.includes('gov_'+governorates[location])||(location==='gamalon'&&wanted.includes('october'));
 export const residential=['apartment','villa','chalet'];
+// Property types grouped into three categories (wizard chips, photo tiles, colour edges and icons).
+export const TYPE_GROUPS=[['groupHome',['apartment','villa','chalet']],['groupBusiness',['office','retail','commercial','building']],['groupLand',['land','warehouse','factory','other']]] as const;
+export type TypeGroup=typeof TYPE_GROUPS[number][0];
+// Category of a property type (groupHome, groupBusiness or groupLand).
+export const catOf=(type:string):TypeGroup=>TYPE_GROUPS.find(([,types])=>(types as readonly string[]).includes(type))?.[0]??'groupLand';
 export interface PropertyRequest { intent:'buy'; type:string; locations:string[]; budgetMin:number; budgetMax:number; sizeMin:number; sizeMax:number; bedrooms:number; bathrooms:number; floor:string; features:string[]; notes:string; name:string; phone:string; consent:boolean; broker:boolean; company:string; }
 export const initialRequest:PropertyRequest={intent:'buy',type:'',locations:[],budgetMin:5000000,budgetMax:15000000,sizeMin:150,sizeMax:250,bedrooms:0,bathrooms:0,floor:'',features:[],notes:'',name:'',phone:'',consent:false,broker:false,company:''};
 export const validation={phone:/^(?:\+?20|0)?1[0125]\d{8}$/,maxBudget:200000000,minName:2};
