@@ -103,6 +103,12 @@ The buyer request wizard (contact step), the seller offer form and "Let us keep 
   - the newest request (type, areas, budget, size). Tapping it opens the usual request details.
 - The old made-up scene ("12 matches", "92%", "4,000 m²", "50–70") and the separate demo bar under the hero were removed.
 
+## Request cards and feed (redesign Phase 2)
+- **Cards** show "Wanted to buy", the type and areas, the request's age and its BM reference, size, budget and feature chips. The "Anonymous buyer" line, the per-card "Active request" badge, the bookmark icon and the decorative response counts were removed (live requests never had response counts). The admin's public-post preview uses the same layout.
+- **Type chips** are built from the requests that match the search, most common first, each with its count, so every type in the feed can be filtered (shops, buildings and warehouses had no chip before).
+- **Search** looks at both languages' labels (type, areas, features) and the BM reference; every word must match; Arabic spelling variants (أ/إ/آ/ا, ة/ه, ى/ي, diacritics) are ignored. A clear button empties it.
+- **Order** is always newest first ("Sorted by newest" is plain text, not a menu). "Show more" adds 6 cards at a time and shows how many remain. The counter uses correct Arabic and English plurals.
+
 ## Buyer and seller views
 `/request-property` has two views, switched by "بتشتري | بتبيع" in the header. `?for=sellers` opens the seller view directly, for ads and WhatsApp links.
 

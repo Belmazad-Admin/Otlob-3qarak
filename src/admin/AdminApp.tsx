@@ -129,16 +129,15 @@ function BuyerDetail({b,options,onChanged,onAuthLost}:{b:Buyer;options:{location
   </div></section>;
 }
 
-// Mirrors the public DemandCard markup and styles, so the preview matches the website.
+// Mirrors the public request card markup and styles, so the preview matches the website.
 function PublicCard({d,lang}:{d:Demand;lang:'ar'|'en'}){
  const l=(k:string)=>label(k,lang),num=(n:number)=>new Intl.NumberFormat(lang==='ar'?'ar-EG':'en-EG').format(n),m=(n:number)=>num(n/1e6);
- const t=lang==='ar'?{wanted:'مطلوب للشراء',size:'المساحة',budget:'الميزانية',sqm:'م²',million:'مليون جنيه',ns:'غير محدد',around:'حوالي',upTo:'حتى',above:'أكثر من',open:'مفتوحة',anon:'مشتري مجهول الهوية',active:'طلب نشط',range:'نطاق'}:{wanted:'WANTED TO BUY',size:'Area',budget:'Budget',sqm:'m²',million:'M EGP',ns:'Not specified',around:'Around',upTo:'Up to',above:'Above',open:'Open',anon:'Anonymous buyer',active:'Active request',range:'Range'};
+ const t=lang==='ar'?{wanted:'مطلوب للشراء',size:'المساحة',budget:'الميزانية',sqm:'م²',million:'مليون جنيه',ns:'غير محدد',around:'حوالي',upTo:'حتى',above:'أكثر من',open:'مفتوحة',range:'نطاق'}:{wanted:'WANTED TO BUY',size:'Area',budget:'Budget',sqm:'m²',million:'M EGP',ns:'Not specified',around:'Around',upTo:'Up to',above:'Above',open:'Open',range:'Range'};
  const size=!d.sizeMin?t.ns:d.sizeMin===d.sizeMax?num(d.sizeMin):`${num(d.sizeMin)}–${num(d.sizeMax)}`;
  const budget=d.approx?(d.min===d.max?`${t.around} ${m(d.min)}`:`${m(d.min)}–${m(d.max)}`):d.band==='band_open'?t.open:!d.max?`${t.above} ${m(d.min)}`:!d.min&&d.band?`${t.upTo} ${m(d.max)}`:`${m(d.min)}–${m(d.max)}`;
- return <article className="demand-card" dir={lang==='ar'?'rtl':'ltr'} lang={lang}><div className="post-meta"><span className="avatar"><Home size={20}/></span><div><strong>{t.anon}</strong><span>{d.id}</span></div><span className="status">{t.active}</span></div>
-  <div className="post-main"><div><span className="wanted">{t.wanted}</span><h3>{l(d.type)} <span className="location-inline">/ {d.locations.map(l).join(' • ')}</span></h3></div></div>
+ return <article className="demand-card" dir={lang==='ar'?'rtl':'ltr'} lang={lang}><div className="post-head"><span className="avatar"><Home size={20}/></span><div><span className="wanted">{t.wanted}</span><h3>{l(d.type)} <span className="location-inline">/ {d.locations.map(l).join(' • ')}</span></h3><span className="post-when"><bdi>{d.id}</bdi></span></div></div>
   <div className="post-stats"><div><span>{t.size}</span><strong dir="ltr">{size} {!!d.sizeMin&&<small>{t.sqm}</small>}</strong></div><div><span>{t.budget}</span><strong>{budget} {d.band!=='band_open'&&<small>{t.million}</small>}</strong>{d.approx&&d.band&&<small className="budget-band">{t.range}: {l(d.band)}</small>}</div></div>
-  <div className="chips">{d.features.map(x=><span key={x}>{l(x)}</span>)}</div></article>;
+  {!!d.features.length&&<div className="chips">{d.features.map(x=><span key={x}>{l(x)}</span>)}</div>}</article>;
 }
 
 function Sellers({onAuthLost}:{onAuthLost:()=>void}){

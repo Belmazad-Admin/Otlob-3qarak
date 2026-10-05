@@ -77,7 +77,7 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
 2. **Public page and journeys.** In progress. Covers:
    - header with a phone menu ✅ (4 October 2026; built and checked, not yet tested by the owner)
    - hero with real HubSpot numbers instead of made-up ones; demo bar folded in ✅ (same)
-   - cleaner request cards; fake controls removed, filters and search working
+   - cleaner request cards; fake controls removed, filters and search working ✅ (4 October 2026; built and checked, not yet tested by the owner)
    - wizard: per-field error messages, sticky Next on phones. The goal step is already removed (4 October 2026); the wizard now has 7 steps
    - "عندي العقار ده" directly on match results
    - fix the offer form wording
@@ -114,6 +114,7 @@ The owner asked for easy sign-in, asked for only when submitting. Proposed plan:
 ## Known quirks
 - HubSpot contact property `additional_requirments` rejects special characters, so the website writes a plain letters/numbers version.
 - `scripts/hubspot-setup.mjs` (safe to re-run) creates the HubSpot properties and pipeline. `scripts/hubspot-seed-statuses.mjs` was already run once (5 Pending / 80 Approved / 11 Rejected).
-- Lint has 4 issues inherited from the original zip (in `Marketplace.tsx`) plus one "use next/image" hint for the hero photo, the same hint the seller photo already had; typecheck and build pass.
+- Lint: only two "use next/image" hints remain (hero and seller photos; the site serves plain images). The issues inherited from the original zip were fixed in Phase 2. Typecheck and build pass.
+- Don't run `pnpm build` while the dev server is running: it breaks the dev server (every page returns "internal error"). Stop the preview, build, then start it again.
 - The browser preview pane can't show phone layouts reliably; check on a real phone.
 - In a hidden or background preview tab, the theme's colour fade can stall and leave the page background looking unchanged. In a visible browser it switches normally. The colour values themselves are correct.
