@@ -36,7 +36,7 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 
 ## Practical cautions
 - Photos in `public/photos/` are free Unsplash stock chosen by the owner (credits in `HANDOFF.md`, section "Photos"). The old Mallorca photo was removed because its reuse rights were never established.
-- The text logo is a prototype; replace with approved logo files and licensed fonts before production.
+- The official logo files are in `public/logos/` (Arabic/English, blue/white), shown by `src/BrandLogo.tsx`. Replace the free stand-in fonts with the licensed brand font before production.
 - Apply server-side validation and moderation before publishing free-text buyer notes. Keep private contact fields separate from the public request model.
 - The site's existing private URL may require the original ChatGPT account. This archive is the transferable source.
 

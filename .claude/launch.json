@@ -3,6 +3,12 @@
   "configurations": [
     {
       "name": "belmazad-dev",
+      "runtimeExecutable": "C:\\Windows\\System32\\wsl.exe",
+      "runtimeArgs": ["-d", "Ubuntu", "-e", "bash", "/mnt/n/Belmazad/Otlob Aqarak/scripts/wsl-dev.sh"],
+      "port": 5173
+    },
+    {
+      "name": "belmazad-dev-windows",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["scripts/run-framework.mjs", "dev"],
       "port": 5173

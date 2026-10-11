@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home} from 'lucide-react';
 import {label} from '../content';
 import PropertyIcon from '../PropertyIcon';
+import BrandLogo from '../BrandLogo';
 import {propertyTypes,type Demand} from '../data';
 import './admin.css';
 import ThemeToggle from '../ThemeToggle';
@@ -37,7 +38,7 @@ export default function AdminApp(){
  if(!me)return <div className="adm-center">Loading…</div>;
  if(!me.user)return <Login configured={me.configured} onDone={check}/>;
  return <div className="adm">
-  <header className="adm-top"><span className="adm-brand" dir="ltr">belmazad<b>.com</b> <small>team admin</small></span>
+  <header className="adm-top"><span className="adm-brand" role="img" aria-label="belmazad.com team admin"><BrandLogo lang="en"/> <small>team admin</small></span>
    <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button></nav>
    <ThemeToggle label="Switch light and dark mode"/><span className="adm-user"><LockKeyhole size={14}/>{me.user.name}<button className="adm-link" onClick={()=>api('/api/admin/session',{method:'DELETE'}).then(check)}><LogOut size={15}/>Log out</button></span></header>
   {tab==='buyers'?<Buyers onAuthLost={check}/>:<Sellers onAuthLost={check}/>}
@@ -51,7 +52,7 @@ function Login({configured,onDone}:{configured:boolean;onDone:()=>void}){
   try{await api('/api/admin/session',{method:'POST',body:JSON.stringify({name:f.get('name'),password:f.get('password')})});onDone();}
   catch(err){const s=(err as {status?:number}).status;setError(s===429?'Too many attempts. Wait 15 minutes and try again.':s===400?'Enter your name.':'Wrong password.');}
   finally{setBusy(false);}}}>
-  <span className="adm-brand" dir="ltr">belmazad<b>.com</b></span><h1>Team admin</h1><p>Your name is recorded on every approval you make.</p>
+  <span className="adm-brand" role="img" aria-label="belmazad.com"><BrandLogo lang="en"/></span><h1>Team admin</h1><p>Your name is recorded on every approval you make.</p>
   <label>Your name<input name="name" autoComplete="name" required minLength={2}/></label>
   <label>Team password<input name="password" type="password" autoComplete="current-password" required/></label>
   {error&&<p className="adm-error" role="alert">{error}</p>}

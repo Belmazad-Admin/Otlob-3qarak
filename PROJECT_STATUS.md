@@ -80,8 +80,8 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
    - hero with real HubSpot numbers instead of made-up ones; demo bar folded in ✅ (same)
    - cleaner request cards; fake controls removed, filters and search working ✅ (4 October 2026; built and checked, not yet tested by the owner)
    - wizard: per-field error messages, sticky Next on phones. The goal step is already removed (4 October 2026); the wizard now has 7 steps
-   - "عندي العقار ده" directly on match results
-   - fix the offer form wording
+   - "عندي العقار ده" directly on match results ✅ (7 October 2026; opens the offer form pre-filled with size and price from the matching form)
+   - fix the offer form wording ✅ (seller-specific notes hint)
    - polished dialogs, FAQ, footer and mobile, with photos
 3. **Admin dashboard** restyled with the same system.
 4. **Testing:** every flow (buyer request → approve, offer, keep looking, broker, language, theme), phone, tablet and desktop, keyboard and reduced motion; build and commit.

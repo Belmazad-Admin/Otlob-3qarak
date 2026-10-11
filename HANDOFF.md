@@ -108,6 +108,19 @@ The buyer request wizard (contact step), the seller offer form and "Let us keep 
 - **Newest buyer requests** (buyer view only): the four newest real requests that state a size or budget, as cards with a category colour on top. Sellers get the full feed right after the tiles instead.
 - Colours for the photo overlays and glass (`--photo-shade`, `--glass-fill`, `--fx-cyan`, …) are tokens in the "Futuristic layer" at the end of `src/styles.css`.
 
+## Running the preview in WSL (October 2026)
+Windows Smart App Control is on and blocks the unsigned `workerd.exe` that the Cloudflare/Vinext dev runtime needs, so the dev server runs inside WSL (Ubuntu) instead. Production builds (`pnpm build`) still run on Windows.
+- **Start:** the `belmazad-dev` entry in `.claude/launch.json` runs `scripts/wsl-dev.sh` through `wsl.exe`. It copies the project sources and `.dev.vars` to `~/belmazad` in Ubuntu, keeps that copy in sync every second while it runs, installs packages when the lockfile changes, and starts the dev server. Open http://localhost:5173 as usual.
+- **The Windows folder stays the source of truth.** Edit files there; Ubuntu has its own `node_modules`. Excluded from the copy: `node_modules`, `.git`, `.vinext`, `dist`, `.wrangler` and the 1.3 GB `.sites-runtime` package cache.
+- **One-time setup (done on 7 October 2026):** `wsl --install` (needs administrator and a restart), then Node 24 from nodejs.org in `/opt/node` with Corepack's pnpm, then `pnpm install --frozen-lockfile` in `~/belmazad`. On a slow connection add `--fetch-timeout=900000 --network-concurrency=4`.
+- The old Windows entry is kept as `belmazad-dev-windows`, for a machine without Smart App Control.
+- `.gitattributes` keeps `*.sh` files in LF line endings so they run in Linux.
+
+## Brand logo (October 2026)
+- Official logo files supplied by the owner in `public/logos/`: `logo-ar-blue`, `logo-ar-white`, `logo-en-blue`, `logo-en-white` (PNG, transparent).
+- `src/BrandLogo.tsx` picks the Arabic or English file from the page language; CSS ("Brand logo" in `src/styles.css`) shows the blue version in light mode and the white version in dark mode, and always white on dark backgrounds (the header while it floats over the hero photo, and the navy footer).
+- Used in the site header and footer and the admin header and login screen. Size is set with `--logo-h`.
+
 ## Property icons (October 2026)
 - `src/PropertyIcon.tsx`: one frosted-glass icon per property type, approved by the owner. Each icon is a solid back shape, a frosted front shape (the back shape shows through blurred) and white details, drawn as inline SVG.
 - Colours come from the category tokens (`--cat-home`, `--cat-business`, `--cat-land` and their `-tint` versions) via `--pi-main` and `--pi-tint` in `src/styles.css`; the category itself comes from `catOf()` and `TYPE_GROUPS` in `src/data.ts`.
