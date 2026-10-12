@@ -4,6 +4,7 @@ import {hubspot} from '../hubspot/client';
 import {getWishlist,invalidateWishlist} from '../hubspot/feed';
 import {LISTING_PROPERTIES,toDemand,type WishlistContact} from '../hubspot/wishlist';
 import {createTeamCallTasks} from '../hubspot/sellerResponse';
+import {accountsByContact} from './accounts';
 import {labels,label} from '../content';
 import {propertyTypes,areas,features,governorates,type Demand} from '../data';
 
@@ -32,14 +33,14 @@ const stripOverrides=(c:WishlistContact):WishlistContact=>({...c,properties:Obje
 
 export async function listBuyers(){
  const w=await getWishlist({fresh:true});
- const who=await people(w.entries.map(e=>e.contact.id));
+ const [who,accounts]=await Promise.all([people(w.entries.map(e=>e.contact.id)),accountsByContact()]);
  const salt=env.WISHLIST_ID_SALT||'belmazad-wishlist';
  return Promise.all(w.entries.map(async e=>{
   const p=e.contact.properties,person=who.get(e.contact.id)??{};
   return {
    contactId:e.contact.id,ref:e.demand.id,hubspotUrl:contactUrl(e.contact.id),
    name:[person.firstname,person.lastname].filter(Boolean).join(' ')||'—',phone:person.phone||'',email:person.email||'',
-   broker:p.user_type==='Broker'?{company:person.company||''}:null,fromWebsite:p.website_request_source==='website',
+   broker:p.user_type==='Broker'?{company:person.company||''}:null,fromWebsite:p.website_request_source==='website',account:accounts.get(e.contact.id)??null,
    createdAt:p.createdate,status:e.status,warning:exclusion(e.contact)||(!e.publishable?'Note mentions broker, rent or lease':null),
    comment:p.website_listing_comment||'',reviewedBy:p.website_listing_reviewed_by||'',reviewedAt:p.website_listing_reviewed_at||'',
    original:{type:[p.property_type,p.property_subtype].filter(Boolean).join(' / '),locations:[...new Set([p.preferred_locations,p.secondary_preferred_locations].filter(Boolean))].join(', '),budget:p.budget__maximum_||'',note:p.additional_requirments||'',userType:p.user_type||''},

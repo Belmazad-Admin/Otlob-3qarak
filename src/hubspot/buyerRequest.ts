@@ -25,13 +25,16 @@ export function validateBuyerRequest(input:Record<string,unknown>):PropertyReque
   notes:text(input.notes,700),name:text(input.name,100),phone:text(input.phone,25),consent:input.consent===true,...brokerFields(input)};
  if(!propertyTypes.includes(r.type))throw new InputError('type');
  for(let step=1;step<=6;step++){const e=validateStep(step,r);if(e)throw new InputError(e);}
+ // Name and mobile come from the signed-in account (merged in by the route), not from the wizard.
+ if(r.name.length<2||!egyptianMobile(r.phone))throw new InputError('phoneError');
  if(r.budgetMax>5e9||r.sizeMax>5e7)throw new InputError('range');
  return r;
 }
 
 const recent=new Map<string,{at:number;ref:string}>(); // same buyer + same request within 10 minutes → no second task
 
-export async function submitBuyerRequest(r:PropertyRequest):Promise<{status:'created'|'duplicate';reference:string}>{
+// email: the signed-in account's e-mail. contactId (when created) lets the account record the request.
+export async function submitBuyerRequest(r:PropertyRequest,email?:string):Promise<{status:'created'|'duplicate';reference:string;contactId?:string}>{
  const mobile=egyptianMobile(r.phone)!;
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`BR:${mobile}:${r.type}:${[...r.locations].sort().join(',')}:${r.budgetMin}:${r.budgetMax}:${r.sizeMin}:${r.sizeMax}`));
  const key=[...new Uint8Array(digest).slice(0,8)].map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -52,7 +55,7 @@ export async function submitBuyerRequest(r:PropertyRequest):Promise<{status:'cre
   website_public_type:r.type,website_public_locations:r.locations.join(';'),website_public_features:r.features.join(';'),
   website_public_size_min:String(r.sizeMin),website_public_size_max:String(r.sizeMax),website_public_budget_min:String(r.budgetMin),website_public_budget_max:String(r.budgetMax)};
 
- const contact=await findOrCreateContact(r.name,mobile,r.broker?'Broker':'Buyer',wishlist);
+ const contact=await findOrCreateContact(r.name,mobile,r.broker?'Broker':'Buyer',wishlist,email);
  // An existing contact gets this request as their current wishlist (and goes back to Pending for review).
  if(!contact.created)await hubspot(`/crm/v3/objects/contacts/${contact.id}`,{method:'PATCH',body:{properties:wishlist}});
  const reference=await publicId(contact.id,env.WISHLIST_ID_SALT||'belmazad-wishlist');
@@ -62,8 +65,8 @@ export async function submitBuyerRequest(r:PropertyRequest):Promise<{status:'cre
  const link=`https://app-eu1.hubspot.com/contacts/143644884/record/0-1/${contact.id}`;
  await createTeamCallTasks(`${taskTag(r)} Review new buyer request ${reference} – ${en(r.type)} · ${r.locations.map(en).join(' / ')}`,
   `<p><strong>A buyer submitted a request on belmazad.com.</strong> Review it in the website admin (Buyers → Pending), then approve, request changes or reject. It is not public until approved.</p>`+brokerLine(r)+
-  `<p><strong>Buyer</strong><br>Name: ${esc(r.name)}<br>Mobile: +20${mobile}<br>Contact: <a href="${link}">${link}</a>${contact.created?' (new contact)':' (existing contact, wishlist updated)'}</p>`+
+  `<p><strong>Buyer</strong><br>Name: ${esc(r.name)}<br>Mobile: +20${mobile}${email?`<br>Website account: ${esc(email)}`:''}<br>Contact: <a href="${link}">${link}</a>${contact.created?' (new contact)':' (existing contact, wishlist updated)'}</p>`+
   `<p><strong>Request</strong><br>${esc(summary).replace(/\n/g,'<br>')}</p>`,[contact.id],[],'TODO');
  invalidateWishlist();
- return {status:'created',reference};
+ return {status:'created',reference,contactId:contact.id};
 }

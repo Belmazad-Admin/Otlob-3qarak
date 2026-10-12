@@ -1,6 +1,6 @@
 # Project status — belmazad.com "Request a Property"
 
-Read this first when continuing work in a new conversation. Last updated: 4 October 2026.
+Read this first when continuing work in a new conversation. Last updated: 12 October 2026.
 Technical details for each feature are in `HANDOFF.md`; project rules are in `CLAUDE.md`.
 
 ## Working with the owner (preferences)
@@ -19,9 +19,8 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 - Settings (`.dev.vars`, never committed; template in `.dev.vars.example`): `HUBSPOT_ACCESS_TOKEN` (HubSpot service key "Belmazad Website") and `ADMIN_PASSWORD`.
 - HubSpot: portal 143644884 (EU, app-eu1.hubspot.com).
   - Service key scopes: crm.objects.contacts.read/write, crm.objects.deals.read/write, crm.schemas.contacts.write, crm.schemas.deals.write.
-- Git: a local repository only, with no remote (nothing is uploaded). Git is at `C:\Program Files\Git\cmd\git.exe`.
-  - The owner asks for a commit after each finished phase.
-  - Commits so far: `e119da5` (snapshot of all work up to the broker option) and `a0bee38` (redesign Phase 1: themes and design system).
+- Git: GitHub `Belmazad-Admin/Otlob-3qarak` (private). The owner wants commits pushed straight to `main`. `gh` is signed in as Belmazad-Admin.
+- Hosting: Cloudflare account belmazad@gmail.com. Worker `belmazad-request` → https://belmazad-request.belmazad-b9d.workers.dev (`pnpm deploy`; on Windows PowerShell use `npx.cmd`). D1 database `belmazad`. The domain belmazad.com's DNS is at CloudSmartly, not Cloudflare.
 - Preview server: `.claude/launch.json` defines `belmazad-dev` on port 5173. If another conversation's preview already holds the port, that server serves this same folder and picks up changes live.
 
 ## Decisions made
@@ -30,7 +29,7 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
   - Main CTA: "لاقي مشتري عقارك / Find your buyer". Never "اعرض عقارك", because the main site already handles listings.
   - The buyer pool is called **"serious buyers / مشترين جادين"**.
 - **No unconfirmed claims** in seller copy: no "free", "qualified" or response-time promises (the owner didn't confirm them).
-- **HubSpot is the system of record.** The website has no database of its own for now; the database work (Supabase recommended for security) is **paused** by the owner.
+- **HubSpot is the system of record** for requests and offers. Website accounts (e-mail + password) live in Cloudflare D1 (12 October 2026; replaces the earlier Supabase idea).
 - **Buyer wishlists:** HubSpot contacts from the "Buyer Wishlist Form", plus requests submitted through the website wizard.
   - Public posts are anonymised: no names, phones, record IDs or raw staff notes.
   - Area, district and budget are parsed from staff notes on the server.
@@ -38,7 +37,7 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 - **Tasks** go to both Khadija owners: Khadeja Hesham 33163566 (active) and Khadija Hesham 1824975088 (inactive, but HubSpot accepted it). Titles start with "[Website]", or "[Website] [Broker]" for brokers.
 - **Seller offers and "keep looking"** become deals in the HubSpot pipeline "Website seller offers" (New offer → Contacted → Viewing → Negotiating → Won / Rejected), plus call tasks.
 - **Admin login:** a shared team password plus the person's name. Production plan: Cloudflare Access (@belmazad.com, 2FA) in front of `/admin`.
-- **Brokers:** an "أنا وسيط عقاري (بروكر)" checkbox plus brokerage name in all three forms → User Type = Broker, Company = brokerage. Broker accounts and dashboards are a later phase.
+- **Brokers:** "أنت وسيط عقاري (بروكر)؟" plus brokerage name on the account (sign-up or My account) → User Type = Broker, Company = brokerage. Broker dashboards are a later phase.
 - **Design (redesign, October 2026):**
   - **Homes.com-style structure with a futuristic finish (5 October 2026):** full-width dusk photo hero with the header floating over it, a glass finder (buying/selling tabs, type, area) that pre-fills the wizard or the matching tool, photo tiles per category with live counts, and a "Newest buyer requests" row. New Unsplash photos are credited in `HANDOFF.md`.
   - **Swiss design (5 October 2026), replacing the earlier "liquid glass" look.** Big display type (Archivo for English, Alexandria for Arabic headings), solid brand-colour fields (orange count block in the hero, blue wizard panel, sand feed band, blue matching section, navy footer), a colour edge on request cards by category, one solid-blue primary button, no glows, pulsing dots, eyebrow labels or "How it works" section. The hero itself was later replaced by the photo hero above.
@@ -56,6 +55,7 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 | Team admin `/admin`: Buyers approvals (edit public post, approve / request changes / reject) and Sellers offers (stage, notes, follow-up task) | Done |
 | Broker checkbox in all three forms, Broker badge in the admin | Built. The owner was about to test it |
 | Redesign Phase 1: light/dark themes, theme toggle (site and admin), IBM Plex Sans Arabic, consistent buttons, fields, glass and cards | Done and committed (`a0bee38`). Checked in both themes in the browser |
+| Accounts: sign-in window before offers, "keep looking" and publishing a request; broker checkbox; "My account" page; admin Accounts tab with every account's requests and offers, password reset, disable | Built 12 October 2026. Checked locally (sign-up, sign-in, lockout, account page, phone layout). Not yet tested end-to-end with a real HubSpot submission or by the owner |
 
 ## Waiting on the owner
 1. Test the broker option.
@@ -91,24 +91,14 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
 2. **Photos: free licensed stock.** A shortlist is shown to the owner first; nothing is downloaded until the owner picks. The current Mallorca photo isn't cleared for reuse and will be replaced.
    - Owner picked H3 (El Gouna homes; now the main-action photo tile), S1 (modern villa, seller banner) and E2 (apartment balconies, supporting). Saved in `public/photos/`, credits in `HANDOFF.md`. S1 already replaces the Mallorca photo, which was deleted. H3 and E2 get placed during Phase 2.
 
-## Planned, not started: easy buyer/seller sign-in
-The owner asked for easy sign-in, asked for only when submitting. Proposed plan:
-- **Browsing stays open.** Sign-in is asked for only when submitting a request, offer or "keep looking".
-- **Flow:** the form is already filled in → "Send" → a panel slides up asking to confirm the mobile number already typed → 6-digit code by WhatsApp or SMS → account created and submission sent automatically. Nothing is lost and there is no restart.
-- **Account type** is set by the action: buyer request = Buyer, offer or keep looking = Seller/Owner, broker box = Broker. It's shown in the panel with a one-tap switch.
-- **Sessions:** signed cookies, about 60 days; returning users are pre-filled. No database needed (the HubSpot contact is the profile).
-- **Optional:** a small "حسابي" (my account) page with request and offer statuses.
-- The redesign leaves room for an account button in the header.
-
-**Open questions (unanswered):**
-1. Code provider: Twilio Verify, WhatsApp first then SMS (recommended), an Egyptian SMS provider, or no code for now?
-2. "Continue with Google" too? (Recommendation: skip for now.)
-3. Should accounts be shared with the main belmazad.com "Seller/Broker Login" or separate? What does the main site run on?
-4. Email: don't ask (recommended), optional, or required?
+## Accounts (built 12 October 2026)
+Owner decisions: e-mail + password; buyers sign in when they click Publish (answers kept); sellers sign in before the offer / keep-looking form; a "My account" page; every account trackable in admin. Details in `HANDOFF.md` → "Accounts".
+- **Not yet:** e-mail verification and self-service "forgot password" (need an e-mail sending service on a belmazad.com address); the team resets passwords from Admin → Accounts.
+- **Limit:** HubSpot keeps one wishlist per contact, so a buyer's newer request replaces the older one there; the account keeps the history ("Replaced by a newer request"). Several live requests per buyer would need buyer requests as HubSpot deals.
 
 ## Later phases (discussed)
-- Go online (Cloudflare hosting, new site identity, Access on /admin).
-- Accounts and database (Supabase) once the main-site accounts question is answered.
+- Go online: hosting is live on workers.dev; still to do: secrets on Cloudflare, a belmazad.com address (DNS move from CloudSmartly), Cloudflare Access on /admin.
+- E-mail sending (verification, password reset, notifications).
 - Move to the newer HubSpot API versions before the March/September 2027 deprecation shown on the key page.
 - Production assets: official logo, licensed photos, licensed Neue Haas Grotesk font.
 

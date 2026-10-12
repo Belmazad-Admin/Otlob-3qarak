@@ -43,3 +43,17 @@
 @media(max-width:900px){.adm-split{grid-template-columns:1fr}.adm-list,.adm-table-wrap{max-height:none}.adm-top{flex-wrap:wrap;padding:10px 14px;gap:10px}.adm-main{padding:14px}.adm-private{grid-template-columns:1fr}}
 
 .adm-top .theme-toggle{margin-inline-start:auto}.adm-top .theme-toggle+.adm-user{margin-inline-start:0}
+
+/* Accounts tab: everything an account sent, newest first. */
+.adm-timeline{list-style:none;margin:0 0 4px;padding:0;display:grid;gap:8px}
+.adm-timeline li{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+.adm-timeline-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.adm-timeline-head strong{flex:1;min-width:160px}
+.adm-timeline li small{display:block;color:var(--muted);margin-top:4px}
+.adm-timeline .note{margin:6px 0 0;white-space:pre-wrap;color:var(--ink)}
+.adm-timeline-links{display:flex;gap:14px;margin-top:6px}
+.adm-timeline-links a{color:var(--blue);display:inline-flex;align-items:center;gap:4px;font-size:12px}
+.badge.replaced,.badge.unknown{background:var(--surface);color:var(--muted)}
+.adm-temp{background:var(--pale-blue);border-radius:8px;padding:10px 12px;font-size:14px}
+.adm-temp code{font-size:16px;font-weight:700;letter-spacing:.04em;user-select:all}
+.adm-private dd .adm-link{display:inline-flex;align-items:center;gap:4px;padding:0}

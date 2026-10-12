@@ -1,7 +1,7 @@
 'use client';
 // Team admin: Buyers (wishlist approvals) and Sellers (offers). All data comes from /api/admin/* (HubSpot-backed).
 import {useCallback,useEffect,useMemo,useState} from 'react';
-import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home} from 'lucide-react';
+import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home,UserRound,KeyRound,Ban,Mail} from 'lucide-react';
 import {label} from '../content';
 import PropertyIcon from '../PropertyIcon';
 import BrandLogo from '../BrandLogo';
@@ -10,10 +10,11 @@ import './admin.css';
 import ThemeToggle from '../ThemeToggle';
 
 type Status='pending'|'approved'|'changes_requested'|'rejected';
-type Buyer={contactId:string;ref:string;hubspotUrl:string;name:string;phone:string;email:string;broker:{company:string}|null;fromWebsite:boolean;createdAt?:string|null;status:Status;warning:string|null;comment:string;reviewedBy:string;reviewedAt:string;
+type AccountRef={id:number;email:string}|null; // the website account behind a HubSpot contact, if any
+type Buyer={contactId:string;ref:string;hubspotUrl:string;name:string;phone:string;email:string;broker:{company:string}|null;fromWebsite:boolean;account:AccountRef;createdAt?:string|null;status:Status;warning:string|null;comment:string;reviewedBy:string;reviewedAt:string;
  original:{type:string;locations:string;budget:string;note:string;userType:string};publicPost:Demand;automatic:Demand;edited:boolean};
 type Stage={id:string;label:string;closed:boolean};
-type Offer={id:string;hubspotUrl:string;kind:'offer'|'keep_looking';createdAt?:string|null;stageId?:string|null;stage?:string|null;seller:{id:string;url:string;name:string;phone:string};buyer:{id:string;url:string;name:string}|null;
+type Offer={id:string;hubspotUrl:string;kind:'offer'|'keep_looking';createdAt?:string|null;stageId?:string|null;stage?:string|null;seller:{id:string;url:string;name:string;phone:string;account:AccountRef};buyer:{id:string;url:string;name:string}|null;
  request:{ref:string;summary:string}|null;property:string;area:number;price:number;details:string;notes:string;brokerCompany:string};
 const BrokerBadge=({company}:{company:string})=><span className="badge broker">Broker{company?` · ${company}`:''}</span>;
 type Fields={type:string;locations:string[];sizeMin:number|null;sizeMax:number|null;budgetMin:number|null;budgetMax:number|null;features:string[]};
@@ -32,16 +33,18 @@ async function api<T>(url:string,init?:RequestInit):Promise<T>{
 
 export default function AdminApp(){
  const [me,setMe]=useState<{configured:boolean;user:{name:string}|null}|null>(null);
- const [tab,setTab]=useState<'buyers'|'sellers'>('buyers');
+ const [tab,setTab]=useState<'buyers'|'sellers'|'accounts'>('buyers');
+ const [focusAccount,setFocusAccount]=useState<number|null>(null);
+ const openAccount=useCallback((id:number)=>{setFocusAccount(id);setTab('accounts');},[]);
  const check=useCallback(()=>{api<{configured:boolean;user:{name:string}|null}>('/api/admin/session').then(setMe).catch(()=>setMe({configured:false,user:null}));},[]);
  useEffect(()=>{check();document.documentElement.dir='ltr';document.documentElement.lang='en';},[check]);
  if(!me)return <div className="adm-center">Loading…</div>;
  if(!me.user)return <Login configured={me.configured} onDone={check}/>;
  return <div className="adm">
   <header className="adm-top"><span className="adm-brand" role="img" aria-label="belmazad.com team admin"><BrandLogo lang="en"/> <small>team admin</small></span>
-   <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button></nav>
+   <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button><button aria-pressed={tab==='accounts'} className={tab==='accounts'?'on':''} onClick={()=>{setFocusAccount(null);setTab('accounts');}}><UserRound size={16}/>Accounts</button></nav>
    <ThemeToggle label="Switch light and dark mode"/><span className="adm-user"><LockKeyhole size={14}/>{me.user.name}<button className="adm-link" onClick={()=>api('/api/admin/session',{method:'DELETE'}).then(check)}><LogOut size={15}/>Log out</button></span></header>
-  {tab==='buyers'?<Buyers onAuthLost={check}/>:<Sellers onAuthLost={check}/>}
+  {tab==='buyers'?<Buyers onAuthLost={check} openAccount={openAccount}/>:tab==='sellers'?<Sellers onAuthLost={check} openAccount={openAccount}/>:<Accounts key={focusAccount??'all'} focus={focusAccount} onAuthLost={check}/>}
  </div>;
 }
 
@@ -59,7 +62,9 @@ function Login({configured,onDone}:{configured:boolean;onDone:()=>void}){
   <button className="adm-btn primary" disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form></div>;
 }
 
-function Buyers({onAuthLost}:{onAuthLost:()=>void}){
+const AccountLink=({account,open}:{account:AccountRef;open:(id:number)=>void})=>account?<div><dt>Website account</dt><dd><button className="adm-link" onClick={()=>open(account.id)}><UserRound size={13}/>{account.email}</button></dd></div>:null;
+
+function Buyers({onAuthLost,openAccount}:{onAuthLost:()=>void;openAccount:(id:number)=>void}){
  const [data,setData]=useState<{buyers:Buyer[];options:{locations:string[];features:string[]}}|null>(null);
  const [error,setError]=useState('');const [filter,setFilter]=useState<Status|'all'>('pending');const [query,setQuery]=useState('');const [selected,setSelected]=useState<string|null>(null);
  const load=useCallback(()=>{api<{buyers:Buyer[];options:{locations:string[];features:string[]}}>('/api/admin/buyers').then(d=>{setData(d);setError('');}).catch(e=>{if((e as {status?:number}).status===401)onAuthLost();else setError('Could not load requests from HubSpot.');});},[onAuthLost]);
@@ -76,11 +81,11 @@ function Buyers({onAuthLost}:{onAuthLost:()=>void}){
    <ul className="adm-list" aria-label="Buyer requests">{!data?<li className="adm-empty">Loading requests…</li>:!list.length?<li className="adm-empty">No requests here.</li>:list.map(b=><li key={b.contactId}><button className={selected===b.contactId?'on':''} onClick={()=>setSelected(b.contactId)}>
     <span className="row1"><strong>{en(b.publicPost.type)} · {b.publicPost.locations.map(en).join(', ')}</strong><span className={`badge ${b.status}`}>{STATUS[b.status]}</span></span>
     <span className="row2">{b.name} · {b.ref} · {date(b.createdAt)}{b.fromWebsite&&' · website'}</span>{b.broker&&<span><BrokerBadge company={b.broker.company}/></span>}{b.warning&&<span className="row3">⚠ {b.warning}</span>}</button></li>)}</ul>
-   {current?<BuyerDetail key={current.contactId+current.status+current.reviewedAt} b={current} options={data!.options} onChanged={load} onAuthLost={onAuthLost}/>:<div className="adm-card adm-placeholder"><Eye size={26}/><p>Select a request to review it.</p></div>}
+   {current?<BuyerDetail key={current.contactId+current.status+current.reviewedAt} b={current} options={data!.options} onChanged={load} onAuthLost={onAuthLost} openAccount={openAccount}/>:<div className="adm-card adm-placeholder"><Eye size={26}/><p>Select a request to review it.</p></div>}
   </div></main>;
 }
 
-function BuyerDetail({b,options,onChanged,onAuthLost}:{b:Buyer;options:{locations:string[];features:string[]};onChanged:()=>void;onAuthLost:()=>void}){
+function BuyerDetail({b,options,onChanged,onAuthLost,openAccount}:{b:Buyer;options:{locations:string[];features:string[]};onChanged:()=>void;onAuthLost:()=>void;openAccount:(id:number)=>void}){
  const [f,setF]=useState<Fields>(fieldsOf(b.publicPost));const [dirty,setDirty]=useState(false);const [comment,setComment]=useState('');
  const [busy,setBusy]=useState('');const [msg,setMsg]=useState<{ok:boolean;text:string}|null>(null);const [lang,setLang]=useState<'ar'|'en'>('ar');const [locQuery,setLocQuery]=useState('');
  const set=(p:Partial<Fields>)=>{setF(v=>({...v,...p}));setDirty(true);};
@@ -101,7 +106,7 @@ function BuyerDetail({b,options,onChanged,onAuthLost}:{b:Buyer;options:{location
    <a className="adm-btn" href={b.hubspotUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Open in HubSpot</a></div>
   {b.warning&&<p className="adm-warn">⚠ {b.warning}. It was excluded automatically; approving will publish it anyway.</p>}
   <h3><LockKeyhole size={15}/>Private (team only)</h3>
-  <dl className="adm-private"><div><dt>Buyer</dt><dd>{b.name}</dd></div><div><dt>Mobile</dt><dd>{b.phone?<a href={`tel:${b.phone}`} dir="ltr"><Phone size={13}/>{b.phone}</a>:'—'}</dd></div>{b.email&&<div><dt>E-mail</dt><dd>{b.email}</dd></div>}
+  <dl className="adm-private"><div><dt>Buyer</dt><dd>{b.name}</dd></div><div><dt>Mobile</dt><dd>{b.phone?<a href={`tel:${b.phone}`} dir="ltr"><Phone size={13}/>{b.phone}</a>:'—'}</dd></div>{b.email&&<div><dt>E-mail</dt><dd>{b.email}</dd></div>}<AccountLink account={b.account} open={openAccount}/>
    <div><dt>Submitted</dt><dd>{date(b.createdAt)}</dd></div><div><dt>HubSpot type</dt><dd>{b.original.type||'—'}</dd></div><div><dt>HubSpot locations</dt><dd>{b.original.locations||'—'}</dd></div><div><dt>HubSpot budget</dt><dd>{b.original.budget||'—'}</dd></div>{b.original.userType&&<div><dt>User type</dt><dd>{b.original.userType}</dd></div>}
    <div className="wide"><dt>Staff note</dt><dd className="note">{b.original.note||'—'}</dd></div>
    {b.reviewedAt&&<div className="wide"><dt>Last decision</dt><dd>{STATUS[b.status]} by {b.reviewedBy||'—'} · {date(b.reviewedAt)}{b.comment&&<><br/>“{b.comment}”</>}</dd></div>}</dl>
@@ -142,7 +147,7 @@ function PublicCard({d,lang}:{d:Demand;lang:'ar'|'en'}){
   {!!d.features.length&&<div className="chips">{d.features.map(x=><span key={x}>{l(x)}</span>)}</div>}</article>;
 }
 
-function Sellers({onAuthLost}:{onAuthLost:()=>void}){
+function Sellers({onAuthLost,openAccount}:{onAuthLost:()=>void;openAccount:(id:number)=>void}){
  const [data,setData]=useState<{ready:boolean;stages:Stage[];offers:Offer[]}|null>(null);const [error,setError]=useState('');
  const [stage,setStage]=useState<string>('all');const [kind,setKind]=useState<'all'|'offer'|'keep_looking'>('all');const [selected,setSelected]=useState<string|null>(null);
  const load=useCallback(()=>{api<{ready:boolean;stages:Stage[];offers:Offer[]}>('/api/admin/sellers').then(d=>{setData(d);setError('');}).catch(e=>{if((e as {status?:number}).status===401)onAuthLost();else setError('Could not load offers from HubSpot.');});},[onAuthLost]);
@@ -160,11 +165,11 @@ function Sellers({onAuthLost}:{onAuthLost:()=>void}){
     <tbody>{!data?<tr><td colSpan={5} className="adm-empty">Loading offers…</td></tr>:!list.length?<tr><td colSpan={5} className="adm-empty">No offers here yet.</td></tr>:list.map(o=><tr key={o.id} className={selected===o.id?'on':''} onClick={()=>setSelected(o.id)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')setSelected(o.id);}}>
      <td>{date(o.createdAt)}</td><td>{o.kind==='keep_looking'?<em>Keep looking (no request)</em>:<>{o.request?.ref}<br/><small>{o.request?.summary}</small></>}</td>
      <td>{o.seller.name}{o.brokerCompany&&<> <BrokerBadge company={o.brokerCompany}/></>}<br/><small>{o.property}{o.area?` · ${o.area.toLocaleString('en-US')} m²`:''}</small></td><td>{egp(o.price)}</td><td><span className="badge stage">{o.stage}</span></td></tr>)}</tbody></table></div>
-   {current?<OfferDetail key={current.id+current.stageId+current.notes} o={current} stages={data!.stages} onChanged={load} onAuthLost={onAuthLost}/>:<div className="adm-card adm-placeholder"><Eye size={26}/><p>Select an offer to follow up.</p></div>}
+   {current?<OfferDetail key={current.id+current.stageId+current.notes} o={current} stages={data!.stages} onChanged={load} onAuthLost={onAuthLost} openAccount={openAccount}/>:<div className="adm-card adm-placeholder"><Eye size={26}/><p>Select an offer to follow up.</p></div>}
   </div></main>;
 }
 
-function OfferDetail({o,stages,onChanged,onAuthLost}:{o:Offer;stages:Stage[];onChanged:()=>void;onAuthLost:()=>void}){
+function OfferDetail({o,stages,onChanged,onAuthLost,openAccount}:{o:Offer;stages:Stage[];onChanged:()=>void;onAuthLost:()=>void;openAccount:(id:number)=>void}){
  const [notes,setNotes]=useState(o.notes);const [task,setTask]=useState('');const [busy,setBusy]=useState('');const [msg,setMsg]=useState<{ok:boolean;text:string}|null>(null);
  async function run(kind:string,fn:()=>Promise<unknown>,ok:string){setBusy(kind);setMsg(null);try{await fn();setMsg({ok:true,text:ok});onChanged();}catch(e){if((e as {status?:number}).status===401)onAuthLost();else setMsg({ok:false,text:'Could not save to HubSpot. Try again.'});}finally{setBusy('');}}
  return <section className="adm-card adm-detail" aria-label="Offer">
@@ -172,6 +177,7 @@ function OfferDetail({o,stages,onChanged,onAuthLost}:{o:Offer;stages:Stage[];onC
   <dl className="adm-private">
    <div><dt>Seller</dt><dd>{o.seller.name}{o.seller.url&&<> · <a href={o.seller.url} target="_blank" rel="noreferrer">HubSpot contact <ExternalLink size={12}/></a></>}</dd></div>
    <div><dt>Mobile</dt><dd>{o.seller.phone?<a href={`tel:${o.seller.phone}`} dir="ltr"><Phone size={13}/>{o.seller.phone}</a>:'—'}</dd></div>
+   <AccountLink account={o.seller.account} open={openAccount}/>
    {o.buyer&&<div><dt>Buyer</dt><dd>{o.buyer.name} · <a href={o.buyer.url} target="_blank" rel="noreferrer">HubSpot contact <ExternalLink size={12}/></a></dd></div>}
    {o.request&&<div><dt>Buyer request</dt><dd>{o.request.ref} · {o.request.summary}</dd></div>}
    <div><dt>Property</dt><dd>{o.property}{o.area?` · ${o.area.toLocaleString('en-US')} m²`:''}</dd></div><div><dt>Asking price</dt><dd>{o.price?`${o.price.toLocaleString('en-US')} EGP`:'—'}</dd></div>
@@ -183,5 +189,75 @@ function OfferDetail({o,stages,onChanged,onAuthLost}:{o:Offer;stages:Stage[];onC
   <label className="adm-comment">Follow-up task for Khadija<textarea rows={2} value={task} onChange={e=>setTask(e.target.value)} placeholder="Call the seller to arrange a viewing" maxLength={2000}/></label>
   <div className="adm-actions"><button className="adm-btn primary" disabled={!!busy||task.trim().length<3} onClick={()=>run('task',()=>api(`/api/admin/sellers/${o.id}`,{method:'POST',body:JSON.stringify({note:task})}).then(()=>setTask('')),'Follow-up task created in HubSpot.')}><Send size={16}/>{busy==='task'?'Creating…':'Create follow-up task'}</button></div>
   {msg&&<p className={msg.ok?'adm-ok':'adm-error'} role={msg.ok?'status':'alert'}>{msg.text}</p>}
+ </section>;
+}
+
+// ---- Accounts: every buyer/seller website account, with all its requests and offers ----
+type Account={id:number;name:string;email:string;phone:string;broker:boolean;company:string;disabled:boolean;createdAt:number;lastLoginAt:number|null;hubspotUrl:string;requests:number;offers:number};
+type Tracked={id:number;kind:'buyer_request'|'offer'|'keep_looking';ref:string;createdAt:number;summary:Record<string,unknown>;status:string;stageLabel:string;contactUrl:string;dealUrl:string};
+const KIND:Record<Tracked['kind'],string>={buyer_request:'Buyer request',offer:'Offer',keep_looking:'Keep looking'};
+const REQUEST_STATUS:Record<string,string>={...STATUS,replaced:'Replaced by a newer request',unknown:'Status unavailable'};
+const ms=(n:number|null)=>n?date(new Date(n).toISOString()):'—';
+const plural=(n:number,word:string)=>`${n} ${word}${n===1?'':'s'}`;
+
+function Accounts({focus,onAuthLost}:{focus:number|null;onAuthLost:()=>void}){
+ const [accounts,setAccounts]=useState<Account[]|null>(null);const [error,setError]=useState('');
+ const [filter,setFilter]=useState<'all'|'brokers'|'requests'|'offers'|'disabled'>('all');const [query,setQuery]=useState('');const [selected,setSelected]=useState<number|null>(focus);
+ const load=useCallback(()=>{api<{accounts:Account[]}>('/api/admin/accounts').then(d=>{setAccounts(d.accounts);setError('');}).catch(e=>{if((e as {status?:number}).status===401)onAuthLost();else setError('Could not load accounts.');});},[onAuthLost]);
+ useEffect(()=>{load();},[load]);
+ const match:Record<typeof filter,(a:Account)=>boolean>={all:()=>true,brokers:a=>a.broker,requests:a=>a.requests>0,offers:a=>a.offers>0,disabled:a=>a.disabled};
+ const q=query.toLowerCase();
+ const list=(accounts??[]).filter(a=>match[filter](a)&&(!q||`${a.name} ${a.email} ${a.phone} ${a.company}`.toLowerCase().includes(q)));
+ const current=accounts?.find(a=>a.id===selected)??null;
+ return <main className="adm-main">
+  <div className="adm-bar"><div className="adm-chips">{([['all','All'],['brokers','Brokers'],['requests','With requests'],['offers','With offers'],['disabled','Disabled']] as const).map(([k,name])=><button key={k} aria-pressed={filter===k} className={`chip ${filter===k?'on':''}`} onClick={()=>setFilter(k)}>{name} <b>{(accounts??[]).filter(match[k]).length}</b></button>)}</div>
+   <label className="adm-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, e-mail, phone, company…" aria-label="Search accounts"/></label>
+   <button className="adm-btn" onClick={load}><RefreshCw size={15}/>Refresh</button></div>
+  {error&&<p className="adm-error" role="alert">{error}</p>}
+  <div className="adm-split">
+   <ul className="adm-list" aria-label="Accounts">{!accounts?<li className="adm-empty">Loading accounts…</li>:!list.length?<li className="adm-empty">No accounts here yet.</li>:list.map(a=><li key={a.id}><button className={selected===a.id?'on':''} onClick={()=>setSelected(a.id)}>
+    <span className="row1"><strong>{a.name}</strong>{a.disabled&&<span className="badge rejected">Disabled</span>}</span>
+    <span className="row2">{a.email} · <bdi dir="ltr">{a.phone}</bdi></span>
+    <span className="row2">{plural(a.requests,'request')} · {plural(a.offers,'offer')} · joined {ms(a.createdAt)}</span>{a.broker&&<span><BrokerBadge company={a.company}/></span>}</button></li>)}</ul>
+   {current?<AccountDetail key={current.id+String(current.disabled)} a={current} onChanged={load} onAuthLost={onAuthLost}/>:<div className="adm-card adm-placeholder"><Eye size={26}/><p>Select an account to see everything it sent.</p></div>}
+  </div></main>;
+}
+
+function AccountDetail({a,onChanged,onAuthLost}:{a:Account;onChanged:()=>void;onAuthLost:()=>void}){
+ const [items,setItems]=useState<Tracked[]|null>(null);const [busy,setBusy]=useState('');const [msg,setMsg]=useState<{ok:boolean;text:string}|null>(null);const [temp,setTemp]=useState('');
+ useEffect(()=>{api<{items:Tracked[]}>(`/api/admin/accounts/${a.id}`).then(d=>setItems(d.items)).catch(e=>{if((e as {status?:number}).status===401)onAuthLost();else setMsg({ok:false,text:'Could not load this account’s activity.'});});},[a.id,onAuthLost]);
+ async function act(action:'reset'|'disable'|'enable'){
+  if(action==='reset'&&!confirm(`Reset the password for ${a.email}? They will be signed out everywhere.`))return;
+  if(action==='disable'&&!confirm(`Disable ${a.email}? They will be signed out and cannot sign in until the account is enabled again.`))return;
+  setBusy(action);setMsg(null);setTemp('');
+  try{const r=await api<{password?:string}>(`/api/admin/accounts/${a.id}`,{method:'POST',body:JSON.stringify({action})});
+   if(r.password){setTemp(r.password);setMsg({ok:true,text:'Password reset. Give this temporary password to the user (it is shown only once); they can change it in “My account”.'});}
+   else{setMsg({ok:true,text:action==='disable'?'Account disabled.':'Account enabled.'});onChanged();}}
+  catch(e){if((e as {status?:number}).status===401)onAuthLost();else setMsg({ok:false,text:'Could not update the account. Try again.'});}
+  finally{setBusy('');}
+ }
+ const describe=(i:Tracked)=>{const s=i.summary as {type?:string;locations?:string[];location?:string;sizeMin?:number;sizeMax?:number;budgetMin?:number;budgetMax?:number;size?:number;price?:number;details?:string;notes?:string;requestId?:string};
+  const area=(n?:number)=>n?`${n.toLocaleString('en-US')} m²`:'',price=(n?:number)=>n?`${n.toLocaleString('en-US')} EGP`:'';
+  if(i.kind==='buyer_request')return {title:`${en(s.type??'other')} · ${(s.locations??[]).map(en).join(', ')}`,facts:[s.sizeMin?`${s.sizeMin.toLocaleString('en-US')}–${area(s.sizeMax)}`:'',s.budgetMax?`${egp(s.budgetMin??0)} – ${egp(s.budgetMax)}`:''],note:s.notes};
+  if(i.kind==='offer')return {title:`Offer on ${s.requestId??i.ref}`,facts:[area(s.size),price(s.price)],note:s.details};
+  return {title:`Keep looking · ${en(s.type??'other')} · ${en(s.location??'')}`,facts:[area(s.size),price(s.price)],note:s.details};};
+ return <section className="adm-card adm-detail" aria-label={`Account ${a.email}`}>
+  <div className="adm-detail-head"><div><h2>{a.name}</h2>{a.disabled&&<span className="badge rejected">Disabled</span>}{a.broker&&<> <BrokerBadge company={a.company}/></>}</div>
+   {a.hubspotUrl&&<a className="adm-btn" href={a.hubspotUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/>Open in HubSpot</a>}</div>
+  <h3><LockKeyhole size={15}/>Account (team only)</h3>
+  <dl className="adm-private"><div><dt>E-mail</dt><dd><a href={`mailto:${a.email}`}><Mail size={13}/>{a.email}</a></dd></div><div><dt>Mobile</dt><dd><a href={`tel:${a.phone}`} dir="ltr"><Phone size={13}/>{a.phone}</a></dd></div>
+   <div><dt>Joined</dt><dd>{ms(a.createdAt)}</dd></div><div><dt>Last sign-in</dt><dd>{ms(a.lastLoginAt)}</dd></div>
+   <div><dt>Broker</dt><dd>{a.broker?`Yes · ${a.company}`:'No'}</dd></div><div><dt>Sent</dt><dd>{plural(a.requests,'buyer request')} · {plural(a.offers,'offer')}</dd></div></dl>
+  <h3><Eye size={15}/>Everything this account sent</h3>
+  {!items?<p className="adm-empty">Loading…</p>:!items.length?<p className="adm-empty">Nothing sent yet.</p>:<ol className="adm-timeline">{items.map(i=>{const d=describe(i);return <li key={i.id}>
+   <div className="adm-timeline-head"><span className="badge">{KIND[i.kind]}</span><strong>{d.title}</strong><span className={`badge ${i.kind==='buyer_request'?i.status:'stage'}`}>{i.kind==='buyer_request'?REQUEST_STATUS[i.status]??i.status:i.stageLabel||'Status unavailable'}</span></div>
+   <small>{ms(i.createdAt)}{i.kind==='buyer_request'&&i.ref?` · ${i.ref}`:''}{d.facts.filter(Boolean).map(f=>` · ${f}`).join('')}</small>
+   {d.note&&<p className="note">{d.note}</p>}
+   <span className="adm-timeline-links">{i.contactUrl&&<a href={i.contactUrl} target="_blank" rel="noreferrer">HubSpot contact <ExternalLink size={12}/></a>}{i.dealUrl&&<a href={i.dealUrl} target="_blank" rel="noreferrer">HubSpot deal <ExternalLink size={12}/></a>}</span></li>;})}</ol>}
+  <h3><KeyRound size={15}/>Access</h3>
+  {temp&&<p className="adm-temp" dir="ltr">Temporary password: <code>{temp}</code></p>}
+  {msg&&<p className={msg.ok?'adm-ok':'adm-error'} role={msg.ok?'status':'alert'}>{msg.text}</p>}
+  <div className="adm-actions"><button className="adm-btn" disabled={!!busy} onClick={()=>act('reset')}><KeyRound size={16}/>{busy==='reset'?'Resetting…':'Reset password'}</button>
+   {a.disabled?<button className="adm-btn approve" disabled={!!busy} onClick={()=>act('enable')}><Check size={16}/>{busy==='enable'?'Enabling…':'Enable account'}</button>:<button className="adm-btn reject" disabled={!!busy} onClick={()=>act('disable')}><Ban size={16}/>{busy==='disable'?'Disabling…':'Disable account'}</button>}</div>
  </section>;
 }

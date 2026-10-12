@@ -16,9 +16,11 @@ const TASK_TO_CONTACT=204,TASK_TO_DEAL=216; // HubSpot-defined association type 
 
 // broker/company: "أنا وسيط عقاري" was ticked → contact is tagged Broker and tasks are marked "[Broker]".
 export type Broker={broker:boolean;company:string};
-export type SellerResponse={requestId:string;name:string;phone:string;size:number;price:number;details:string}&Broker;
-export type SellerSearch={name:string;phone:string;type:string;location:string;size:number;price:number;bedrooms:number;bathrooms:number;features:string[];details:string}&Broker;
-export type SellerResult={status:'created'|'duplicate';tasks:number;failedOwners:string[]};
+// name/phone/broker/company come from the signed-in website account (the routes merge them in); email is the account's.
+export type SellerResponse={requestId:string;name:string;phone:string;email?:string;size:number;price:number;details:string}&Broker;
+export type SellerSearch={name:string;phone:string;email?:string;type:string;location:string;size:number;price:number;bedrooms:number;bathrooms:number;features:string[];details:string}&Broker;
+// contactId/dealId (when created) let the website account record what it sent.
+export type SellerResult={status:'created'|'duplicate';tasks:number;failedOwners:string[];contactId?:string;dealId?:string};
 export class InputError extends Error{}
 
 const recent=new Map<string,number>(); // key -> time; covers HubSpot's search-index delay after a create
@@ -69,17 +71,26 @@ async function dedupeKey(prefix:'SR'|'SK',...parts:string[]){
  return prefix+[...new Uint8Array(digest).slice(0,6)].map(b=>b.toString(36).padStart(2,'0')).join('').toUpperCase().slice(0,10);
 }
 
-type Submitter={name:string;mobile:string}&Broker;
-const findOrCreateSeller=(s:Submitter)=>findOrCreateContact(s.name,s.mobile,s.broker?'Broker':'Seller',s.broker?{company:s.company}:{});
+// email: the signed-in website account's e-mail (stored on new contacts; added to existing ones that have none).
+type Submitter={name:string;mobile:string;email?:string}&Broker;
+const findOrCreateSeller=(s:Submitter)=>findOrCreateContact(s.name,s.mobile,s.broker?'Broker':'Seller',s.broker?{company:s.company}:{},s.email);
 // Finds a contact by Egyptian mobile (several stored formats), or creates one with the given user type.
-export async function findOrCreateContact(name:string,mobile:string,userType:'Seller'|'Buyer'|'Broker',extra:Record<string,string>={}){
+export async function findOrCreateContact(name:string,mobile:string,userType:'Seller'|'Buyer'|'Broker',extra:Record<string,string>={},email?:string){
  const variants=['+20'+mobile,'0'+mobile,'+200'+mobile,'20'+mobile];
- const found=await hubspot<{results:{id:string}[]}>('/crm/v3/objects/contacts/search',{method:'POST',body:{
+ const found=await hubspot<{results:{id:string;properties:{email?:string|null}}[]}>('/crm/v3/objects/contacts/search',{method:'POST',body:{
   filterGroups:[...variants.map(v=>({filters:[{propertyName:'phone',operator:'EQ',value:v}]})),{filters:[{propertyName:'hs_whatsapp_phone_number',operator:'EQ',value:'+20'+mobile}]}],
-  properties:['hs_object_id'],sorts:[{propertyName:'createdate',direction:'ASCENDING'}],limit:1}});
- if(found.results[0])return {id:found.results[0].id,created:false};
+  properties:['hs_object_id','email'],sorts:[{propertyName:'createdate',direction:'ASCENDING'}],limit:1}});
+ const match=found.results[0];
+ if(match){
+  // Never overwrite an e-mail the team already has; a clash with another contact's e-mail is only logged.
+  if(email&&!match.properties.email)await hubspot(`/crm/v3/objects/contacts/${match.id}`,{method:'PATCH',body:{properties:{email}}}).catch(error=>console.error('contact e-mail not added:',error instanceof Error?error.message:error));
+  return {id:match.id,created:false};
+ }
  const [firstname,...rest]=name.split(/\s+/);
- const created=await hubspot<{id:string}>('/crm/v3/objects/contacts',{method:'POST',body:{properties:{firstname,lastname:rest.join(' '),phone:'+20'+mobile,user_type:userType,...extra}}});
+ const properties={firstname,lastname:rest.join(' '),phone:'+20'+mobile,user_type:userType,...extra};
+ // HubSpot rejects a new contact whose e-mail another contact already uses; create it without the e-mail then.
+ const created=await hubspot<{id:string}>('/crm/v3/objects/contacts',{method:'POST',body:{properties:email?{...properties,email}:properties}})
+  .catch(error=>{if(email&&error instanceof HubSpotError&&error.status===409)return hubspot<{id:string}>('/crm/v3/objects/contacts',{method:'POST',body:{properties}});throw error;});
  return {id:created.id,created:true};
 }
 
@@ -106,10 +117,10 @@ function describe(d:Demand){
  return {type:label(d.type,'en'),where:d.locations.map(l=>label(l,'en')).join(' / '),size,budget,band:d.band?label(d.band,'en'):'',features:d.features.map(f=>label(f,'en')).join(', ')||'—'};
 }
 const sellerBlock=(s:Submitter,seller:{id:string;created:boolean})=>brokerLine(s)+
- `<p><strong>${s.broker?'Broker':'Seller'}</strong><br>Name: ${esc(s.name)}${s.broker?`<br>Brokerage: ${esc(s.company)}`:''}<br>Mobile: +20${s.mobile}<br>Contact: <a href="${link(seller.id)}">${link(seller.id)}</a>${seller.created?' (new contact created from the website)':' (existing contact)'}</p>`;
+ `<p><strong>${s.broker?'Broker':'Seller'}</strong><br>Name: ${esc(s.name)}${s.broker?`<br>Brokerage: ${esc(s.company)}`:''}<br>Mobile: +20${s.mobile}${s.email?`<br>Website account: ${esc(s.email)}`:''}<br>Contact: <a href="${link(seller.id)}">${link(seller.id)}</a>${seller.created?' (new contact created from the website)':' (existing contact)'}</p>`;
 const contactAssoc=(id:string)=>({to:{id},types:[{associationCategory:'HUBSPOT_DEFINED',associationTypeId:TASK_TO_CONTACT}]});
 
-type TaskPlan={subject:string;body:string;associations:ReturnType<typeof contactAssoc>[]};
+type TaskPlan={subject:string;body:string;associations:ReturnType<typeof contactAssoc>[];dealId?:string};
 
 // Shared pipeline: dedupe per owner → find/create seller → one call task per owner.
 async function createCallTasks(key:string,who:Submitter,plan:(seller:{id:string;created:boolean})=>Promise<TaskPlan>):Promise<SellerResult>{
@@ -124,7 +135,7 @@ async function createCallTasks(key:string,who:Submitter,plan:(seller:{id:string;
   if(!pending.length){if(existing)return {status:'duplicate',tasks:0,failedOwners:[]};throw new Error('No task owner is currently accepted by HubSpot');}
 
   const seller=await findOrCreateSeller(who);
-  const {subject,body,associations}=await plan(seller);
+  const {subject,body,associations,dealId}=await plan(seller);
   let tasks=0;const failedOwners:string[]=[];
   for(const owner of pending){
    try{await hubspot('/crm/v3/objects/tasks',{method:'POST',body:{properties:{hs_task_subject:subject,hs_task_body:WEBSITE_NOTE+body+`<p>Submitted ${new Date().toISOString()} · Duplicate check key ${key}</p>`,hs_task_status:'NOT_STARTED',hs_task_priority:'HIGH',hs_task_type:'CALL',hs_timestamp:new Date().toISOString(),hubspot_owner_id:owner},associations}});
@@ -133,7 +144,7 @@ async function createCallTasks(key:string,who:Submitter,plan:(seller:{id:string;
     if(error.status===400)rejectedOwners.set(owner,Date.now());}
   }
   if(!tasks){if(existing)return {status:'duplicate',tasks:0,failedOwners};throw new Error(`No task could be created (owners ${failedOwners.join(', ')})`);}
-  return {status:'created',tasks,failedOwners};
+  return {status:'created',tasks,failedOwners,contactId:seller.id,dealId};
  })().finally(()=>running.delete(key));
  running.set(key,job);return job;
 }
@@ -155,7 +166,7 @@ export async function submitSellerResponse(input:SellerResponse):Promise<SellerR
  const buyer=wishlist.contacts.get(input.requestId),demand=wishlist.requests.find(d=>d.id===input.requestId);
  if(!buyer||!demand)throw new InputError('requestId');
  const mobile=egyptianMobile(input.phone)!,key=await dedupeKey('SR',buyer.id,mobile);
- const who={name:input.name,mobile,broker:input.broker,company:input.company};
+ const who={name:input.name,mobile,email:input.email,broker:input.broker,company:input.company};
  return createCallTasks(key,who,async seller=>{
   const deals=await buyerDeals(buyer.id);
   const d=describe(demand),p=buyer.properties;
@@ -168,7 +179,8 @@ export async function submitSellerResponse(input:SellerResponse):Promise<SellerR
     `<p><strong>Original wishlist (HubSpot buyer contact)</strong><br>Buyer contact: <a href="${link(buyer.id)}">${link(buyer.id)}</a><br>Property type: ${esc([p.property_type,p.property_subtype].filter(Boolean).join(' / ')||'—')}<br>Preferred locations: ${esc([...new Set([p.preferred_locations,p.secondary_preferred_locations].filter(Boolean))].join(', ')||'—')}<br>Budget range: ${esc(p.budget__maximum_||'—')}<br>Additional requirements: ${lines(p.additional_requirments||'—')}</p>`,
     sellerBlock(who,seller),
     `<p><strong>Seller's property / response</strong><br>Area: ${sqm(input.size)}<br>Asking price: ${egp(input.price)}<br>Details: ${lines(input.details)}</p>`].join(''),
-   associations:[...new Set([buyer.id,seller.id])].map(contactAssoc).concat(deals.map(id=>({to:{id},types:[{associationCategory:'HUBSPOT_DEFINED',associationTypeId:TASK_TO_DEAL}]})),offerDeal)};
+   associations:[...new Set([buyer.id,seller.id])].map(contactAssoc).concat(deals.map(id=>({to:{id},types:[{associationCategory:'HUBSPOT_DEFINED',associationTypeId:TASK_TO_DEAL}]})),offerDeal),
+   dealId:offerDeal[0]?.to.id};
  });
 }
 
@@ -176,7 +188,7 @@ export async function submitSellerSearch(input:SellerSearch):Promise<SellerResul
  const mobile=egyptianMobile(input.phone)!,key=await dedupeKey('SK',mobile,input.type,input.location);
  const type=label(input.type,'en'),where=label(input.location,'en');
  const featureText=input.features.map(f=>label(f,'en')).join(', ');
- const who={name:input.name,mobile,broker:input.broker,company:input.company};
+ const who={name:input.name,mobile,email:input.email,broker:input.broker,company:input.company};
  return createCallTasks(key,who,async seller=>{
   const offerDeal=await createOfferDeal({kind:'keep_looking',key,sellerId:seller.id,sellerName:input.name,brokerCompany:input.company,property:`${type} · ${where}`,area:input.size,price:input.price,
    details:[input.details,featureText&&`Features: ${featureText}`,input.bedrooms||input.bathrooms?`Bedrooms / bathrooms: ${input.bedrooms} / ${input.bathrooms}`:''].filter(Boolean).join('\n')});
@@ -186,6 +198,6 @@ export async function submitSellerSearch(input:SellerSearch):Promise<SellerResul
    `<p><strong>A seller found no matching buyer request today and asked belmazad to keep looking.</strong> Call the seller, then match the property with new buyer requests as they arrive.</p>`,
    sellerBlock(who,seller),
    `<p><strong>Seller's property</strong><br>Type: ${esc(type)}<br>Location: ${esc(where)}<br>Area: ${sqm(input.size)}<br>Asking price: ${egp(input.price)}${input.bedrooms||input.bathrooms?`<br>Bedrooms / bathrooms: ${input.bedrooms} / ${input.bathrooms}`:''}<br>Features: ${esc(input.features.map(f=>label(f,'en')).join(', ')||'—')}${input.details?`<br>Details: ${lines(input.details)}`:''}</p>`].join(''),
-  associations:[contactAssoc(seller.id),...offerDeal]};
+  associations:[contactAssoc(seller.id),...offerDeal],dealId:offerDeal[0]?.to.id};
  });
 }

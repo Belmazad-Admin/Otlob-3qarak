@@ -1,6 +1,7 @@
 # belmazad.com — Request a property
 
-Arabic-first, English-toggle front-end reference. React 19 + TypeScript + Tailwind v4, served by the Sites Vinext starter. No application backend, authentication, payments, or real AI.
+Arabic-first, English-toggle site. React 19 + TypeScript + Tailwind v4 on Vinext / Cloudflare Workers, with HubSpot as the CRM and a Cloudflare D1 database for buyer/seller accounts (see "Accounts"). No payments or real AI.
+Deployed with `pnpm deploy` to the Cloudflare Worker `belmazad-request` (https://belmazad-request.belmazad-b9d.workers.dev); secrets (`HUBSPOT_ACCESS_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`) are set with `wrangler secret put`.
 
 ## Source map
 - `app/page.tsx`: preview redirect to `/request-property`.
@@ -8,7 +9,8 @@ Arabic-first, English-toggle front-end reference. React 19 + TypeScript + Tailwi
 - `src/content.ts`: Arabic/English interface dictionary and translated option labels.
 - `src/styles.css`: semantic palette, responsive rules, motion, font stacks, and the Swiss layers at the end (see "Swiss design"). Replace `--font-brand`, `--font-latin`, and Arabic font with the licensed production assets as appropriate.
 - `src/data.ts`: typed `PropertyRequest`, validation, options, sample demand, deterministic matching function.
-- `src/api.ts`: `submitRequest()` is the future buyer API boundary. Returns a demo reference without transmitting or storing contact information.
+- `src/api.ts`: `submitRequest()` posts the buyer request (signed-in account required; throws `SignInRequired` on 401). Without HubSpot it returns a demo reference.
+- `src/auth/`, `src/account/`, `db/`: accounts (see "Accounts").
 
 ## Agency integration
 1. Replace the text wordmark with the approved brand logo and licensed brand fonts.
@@ -87,8 +89,22 @@ The admin is a private team page; the HubSpot data it shows is never sent to the
 - **Duplicates:** the same buyer and the same request within 10 minutes counts once.
 - **Buyer's confirmation:** shows the real BM- reference and "reviewed by the team" steps. Nothing is added to the public feed before approval.
 
+## Accounts (October 2026)
+Buyers and sellers need a website account (e-mail + password) to publish a request, send an offer or ask us to keep looking. Browsing stays open.
+- **Storage:** Cloudflare D1 database `belmazad` (binding `DB`, ID in `vite.config.ts` and `d1.wrangler.jsonc`). Schema in `db/schema.ts` (Drizzle): `users`, `sessions`, `submissions`, `login_attempts`. HubSpot stays the CRM.
+  - New migration: change `db/schema.ts`, run `pnpm db:generate`, then `pnpm db:migrate` (remote, before deploying) — `pnpm db:migrate:local` for the local copy. The WSL preview applies local migrations on start.
+- **Server** (`src/auth/`): `password.ts` (PBKDF2-SHA256, 100,000 iterations), `accounts.ts` (sign-up, sign-in, sessions, `userRoute` wrapper, `recordSubmission`), `tracking.ts` (statuses from HubSpot).
+  - Sessions: random token in an HttpOnly `bm_user` cookie (30 days, SameSite=Lax); only its SHA-256 is stored, so sign-out, password change and disabling take effect at once.
+  - Brute-force brake in D1: 5 failed sign-ins per e-mail or 30 per IP in 15 minutes (mobile networks share IPs).
+  - Routes: `/api/auth/signup|login|logout|me`, `/api/account` (GET profile + submissions, PATCH profile), `/api/account/password`.
+- **Submissions:** `/api/buyer-request`, `/api/seller-response` and `/api/seller-search` return 401 without a session. Name, mobile and broker details come from the account, never from the form. The account's e-mail is set on new HubSpot contacts and added to existing ones that have none (never overwritten). Each live submission is stored in `submissions` with its BM reference, HubSpot contact and deal IDs and a snapshot of what was sent. Sample (demo) posts stay local and are not stored.
+- **Public UI:** `src/account/AuthDialog.tsx` (Sign in / Create account tabs, "أنت وسيط عقاري (بروكر)؟" checkbox with brokerage name), `useAccount.ts`, and `/account` (`src/account/AccountApp.tsx`): profile, password change, "My requests" and "My offers" with statuses. Header: name or "Sign in" (phone menu below 800 px). Forms show "Sending as … · edit my details". The wizard's answers are kept while the buyer signs in, then it publishes.
+- **Statuses:** a buyer request's status is its HubSpot contact's `website_listing_status`; older requests of the same contact show "Replaced by a newer request" (HubSpot keeps one wishlist per contact). Offers show their deal stage, simplified for the user. HubSpot IDs are not sent to the browser.
+- **Admin → Accounts** (`src/admin/accounts.ts`, `/api/admin/accounts`): every account with counts, search and filters; detail shows everything the account sent with live status and HubSpot links; "Reset password" (temporary password shown once; signs the user out) and "Disable / Enable". Buyers and Sellers detail panels link to the account ("Website account").
+- **Limits:** no e-mail verification or self-service password reset yet (needs an e-mail sending service); the team resets passwords in admin. Requests sent before accounts existed have no account.
+
 ## Brokers
-The buyer request wizard (contact step), the seller offer form and "Let us keep looking" all have an "أنا وسيط عقاري (بروكر)" checkbox. When ticked, a brokerage name is required.
+The broker choice now lives on the account: "أنت وسيط عقاري (بروكر)؟" when creating an account (or later in "My account"), with a required brokerage name. Every request and offer from that account is sent as a broker.
 - **New contacts:** User Type = Broker, and Company = the brokerage.
 - **Existing contacts:** keep their user type; the task notes say it was submitted by a broker.
 - **Tasks:** titled "[Website] [Broker] …", with a "Submitted by a broker — brokerage: …" line. They still go to the Khadija owners.

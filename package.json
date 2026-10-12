@@ -12,7 +12,9 @@
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "deploy": "node scripts/run-framework.mjs build && node ./node_modules/wrangler/bin/wrangler.js deploy --config dist/server/wrangler.json",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node ./node_modules/wrangler/bin/wrangler.js d1 migrations apply belmazad --remote --config d1.wrangler.jsonc",
+    "db:migrate:local": "node ./node_modules/wrangler/bin/wrangler.js d1 migrations apply belmazad --local --persist-to .wrangler/state --config d1.wrangler.jsonc"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

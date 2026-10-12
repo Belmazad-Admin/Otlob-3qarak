@@ -4,8 +4,8 @@ import hostingConfig from "./.openai/hosting.json";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { sites } from "./build/sites-vite-plugin";
 
-const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
-  "00000000-0000-4000-8000-000000000000";
+// Cloudflare D1 database "belmazad" (accounts, sessions, submissions). The ID is not a secret.
+const BELMAZAD_DATABASE_ID = "779917cd-06b3-4355-809d-7ed36a492b29";
 
 const { d1, r2 } = hostingConfig;
 
@@ -22,8 +22,9 @@ const localBindingConfig = {
     ? [
         {
           binding: d1,
-          database_name: "site-creator-d1",
-          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+          database_name: "belmazad",
+          database_id: BELMAZAD_DATABASE_ID,
+          migrations_dir: "drizzle",
         },
       ]
     : [],

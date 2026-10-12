@@ -4,6 +4,7 @@ import {getWishlist} from '../hubspot/feed';
 import {OFFER_PROPERTIES,dealUrl,offerPipeline,type OfferDeal} from '../hubspot/offers';
 import {createTeamCallTasks} from '../hubspot/sellerResponse';
 import {contactUrl} from './buyers';
+import {accountsByContact} from './accounts';
 import {label} from '../content';
 
 export class OfferError extends Error{}
@@ -26,14 +27,14 @@ export async function listOffers(){
   const r=await hubspot<{results:OfferDeal[];paging?:{next?:{after:string}}}>('/crm/v3/objects/deals/search',{method:'POST',body:{
    filterGroups:[{filters:[{propertyName:'pipeline',operator:'EQ',value:pipeline.id}]}],properties:OFFER_PROPERTIES,sorts:[{propertyName:'createdate',direction:'DESCENDING'}],limit:100,...(after?{after}:{})}});
   deals.push(...r.results);after=r.paging?.next?.after;if(!after)break;}
- const who=await people(deals.flatMap(d=>[d.properties.website_seller_contact_id||'',d.properties.website_buyer_contact_id||'']));
+ const [who,accounts]=await Promise.all([people(deals.flatMap(d=>[d.properties.website_seller_contact_id||'',d.properties.website_buyer_contact_id||''])),accountsByContact()]);
  const w=await getWishlist();
  const byRef=new Map(w.entries.map(e=>[e.demand.id,e.demand]));
  return {ready:true as const,stages:pipeline.stages,offers:deals.map(d=>{
   const p=d.properties,sellerId=p.website_seller_contact_id||'',buyerId=p.website_buyer_contact_id||'',request=p.website_request_ref?byRef.get(p.website_request_ref):undefined;
   return {id:d.id,hubspotUrl:dealUrl(d.id),kind:p.website_offer_kind==='keep_looking'?'keep_looking':'offer',createdAt:p.createdate,updatedAt:p.hs_lastmodifieddate,
    stageId:p.dealstage,stage:pipeline.stages.find(s=>s.id===p.dealstage)?.label??p.dealstage,
-   seller:{id:sellerId,url:sellerId?contactUrl(sellerId):'',...(who.get(sellerId)??{name:'—',phone:''})},
+   seller:{id:sellerId,url:sellerId?contactUrl(sellerId):'',...(who.get(sellerId)??{name:'—',phone:''}),account:accounts.get(sellerId)??null},
    buyer:buyerId?{id:buyerId,url:contactUrl(buyerId),name:who.get(buyerId)?.name??'—'}:null,
    request:p.website_request_ref?{ref:p.website_request_ref,summary:request?`${label(request.type,'en')} · ${request.locations.map(l=>label(l,'en')).join(' / ')}`:'(no longer public)'}:null,
    property:p.website_offer_property||'',area:Number(p.website_offer_area)||0,price:Number(p.amount)||0,details:p.website_offer_details||'',notes:p.website_team_notes||'',brokerCompany:p.website_broker_company||''};

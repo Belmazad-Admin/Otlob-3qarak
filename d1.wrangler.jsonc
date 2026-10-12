@@ -1,0 +1,13 @@
+// Only for D1 migrations (pnpm db:migrate / db:migrate:local). The Worker itself is configured in vite.config.ts.
+{
+  "name": "belmazad-request",
+  "compatibility_date": "2026-05-15",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "belmazad",
+      "database_id": "779917cd-06b3-4355-809d-7ed36a492b29",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

@@ -17,6 +17,9 @@ if ! cmp -s pnpm-lock.yaml node_modules/.belmazad-lock 2>/dev/null; then
   COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm install --frozen-lockfile && cp pnpm-lock.yaml node_modules/.belmazad-lock
 fi
 
+# Local D1 database (accounts): apply any new migrations from drizzle/ before starting.
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm db:migrate:local || echo "D1 migrations could not be applied locally"
+
 # Keep syncing while the dev server runs; stop the loop when the server exits.
 ( while sleep 1; do rsync -a --delete "${EXCLUDES[@]}" "$SRC" "$DST"; done ) &
 SYNC_PID=$!

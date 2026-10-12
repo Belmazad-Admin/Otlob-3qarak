@@ -1,5 +1,6 @@
 declare namespace Cloudflare {
   interface Env {
+    /** D1 database "belmazad": website accounts, sessions and submissions (db/schema.ts). */
     DB?: D1Database;
     BUCKET?: R2Bucket;
     /** HubSpot private app token (server-only). Set in .dev.vars locally, as a secret in production. */
