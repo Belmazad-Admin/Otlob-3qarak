@@ -1,7 +1,7 @@
 // Server-only: the buyer chat assistant ("إيه العقار اللي في بالك؟" panel). The model reads what the buyer writes in
 // Egyptian Arabic or English and returns a short reply plus the wizard fields it understood (structured output);
 // the browser fills the 7-step request form with them. It never collects names, phones or e-mails (the account does).
-import {env} from 'cloudflare:workers';
+import {env} from '@/src/env';
 import {eq} from 'drizzle-orm';
 import {getDb} from '@/db';
 import {loginAttempts} from '@/db/schema';
@@ -65,10 +65,10 @@ export function validateChat(input:Record<string,unknown>):{turns:ChatTurn[];lan
  return {turns,lang:input.lang==='en'?'en':'ar'};
 }
 
-// Brake on cost: N requests per IP per hour, shared by all Worker instances (same D1 table as the sign-in brake).
+// Brake on cost: N requests per IP per hour, shared by all server instances (same Postgres table as the sign-in brake).
 export async function overLimit(ip:string){
  const db=getDb(),key=`chat:${ip}`,now=Date.now();
- const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).get();
+ const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).then(r=>r[0]);
  if(!a||now-a.windowStart>60*60_000){await db.insert(loginAttempts).values({key,count:1,windowStart:now}).onConflictDoUpdate({target:loginAttempts.key,set:{count:1,windowStart:now}});return false;}
  if(a.count>=PER_IP_PER_HOUR)return true;
  await db.update(loginAttempts).set({count:a.count+1}).where(eq(loginAttempts.key,key));

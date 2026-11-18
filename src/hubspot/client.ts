@@ -1,5 +1,5 @@
 // Server-only HubSpot REST helper. The token never leaves the server.
-import {env} from 'cloudflare:workers';
+import {env} from '@/src/env';
 
 export class HubSpotError extends Error{constructor(message:string,readonly status:number){super(message);}}
 export const hubspotConfigured=()=>!!env.HUBSPOT_ACCESS_TOKEN;

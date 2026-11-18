@@ -1,7 +1,7 @@
 # belmazad.com — Request a property
 
-Arabic-first, English-toggle site. React 19 + TypeScript + Tailwind v4 on Vinext / Cloudflare Workers, with HubSpot as the CRM and a Cloudflare D1 database for buyer/seller accounts (see "Accounts"). No payments or real AI.
-Deployed with `pnpm deploy` to the Cloudflare Worker `belmazad-request` (https://belmazad-request.belmazad-b9d.workers.dev); secrets (`HUBSPOT_ACCESS_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`) are set with `wrangler secret put`.
+Arabic-first, English-toggle site. React 19 + TypeScript + Tailwind v4 on Next.js 16 (portable Node hosting), with HubSpot as the CRM and a Postgres database for buyer/seller accounts (see "Accounts"). No payments or real AI.
+Deployment: see "Deploying (Vercel / Railway)" below.
 
 ## Source map
 - `app/page.tsx`: preview redirect to `/request-property`.
@@ -37,7 +37,7 @@ The "طلبات المشترين" feed and the seller matching read real buyer r
 - **Mapping** (`src/hubspot/wishlist.ts`): `property_subtype`/`property_type` → type; `preferred_locations` + `secondary_preferred_locations` → governorates; `budget__maximum_` → budget range. The free-text `additional_requirments` note is parsed on the server for area (feddan → m²), EGP budget figures, known districts and requirement keywords. A note budget is used only when it agrees with the HubSpot range. **The note text itself never reaches the browser**, because it contains internal staff remarks, third-party names and sometimes phone numbers.
 - **Privacy:** only type, locations, size, budget, feature chips, dates and an anonymised `BM-xxxx` reference (a hash of the contact ID) are sent. Names, phone numbers, e-mails, owners, lead status and HubSpot record IDs are never requested for, or sent to, the website.
 - **Fallback:** without `HUBSPOT_ACCESS_TOKEN` the route returns 503 `unconfigured` and the page shows the sample requests with the demo label. Once the token is set, sample data is not used; errors show a retry message instead.
-- **Setup:** create a HubSpot private app with the scopes listed in `.dev.vars.example`. Copy that file to `.dev.vars` and paste the token (local dev); in production, set `HUBSPOT_ACCESS_TOKEN` as a secret.
+- **Setup:** create a HubSpot private app with the scopes listed in `.env.example`. Copy that file to `.env.local` and paste the token (local dev); in production, set `HUBSPOT_ACCESS_TOKEN` as a secret.
 - **Known limits:** area, district and budget figures come from automatic parsing of informal notes, so some posts show "غير محدد" or miss a detail. Districts outside the dictionary fall back to the governorate. Staff can improve a post by writing clear figures in the note, e.g. "2000 meter", "budget 30 million", "in gamalon".
 
 ## Themes and design system
@@ -58,10 +58,10 @@ The "طلبات المشترين" feed and the seller matching read real buyer r
 ## Team admin (`/admin`)
 The admin is a private team page; the HubSpot data it shows is never sent to the public site.
 
-- **Login:** the shared team password `ADMIN_PASSWORD` (in `.dev.vars`) plus the person's name, which is recorded on every decision.
+- **Login:** the shared team password `ADMIN_PASSWORD` (in `.env.local`) plus the person's name, which is recorded on every decision.
   - Sessions are HMAC-signed, HttpOnly, SameSite=Strict cookies lasting 12 hours; changing the password logs everyone out.
   - Five failed attempts lock an IP for 15 minutes.
-  - Production: also put Cloudflare Access (@belmazad.com emails, 2FA) in front of `/admin`.
+  - Production: also put an access layer with 2FA (SSO or Vercel Deployment Protection) in front of `/admin`.
 - **Buyers** (`src/admin/buyers.ts`, `/api/admin/buyers`): every Buyer Wishlist request with status filters, search, private details (name, phone, staff note, "Open in HubSpot"), an editable public post with a live Arabic/English preview, and actions.
   - Approve and publish.
   - Request changes: hides the post and creates a "[Website] Call buyer to update request" task.
@@ -92,17 +92,17 @@ The admin is a private team page; the HubSpot data it shows is never sent to the
 ## Buyer chat assistant (October 2026)
 The blue "إيه العقار اللي في بالك؟" panel next to the wizard holds a chat. The buyer writes freely (Egyptian Arabic or English); OpenAI (default `gpt-5-mini`, override with `OPENAI_MODEL`; low reasoning effort, strict structured JSON output) replies in one to three sentences, asks for the most important missing detail, and returns the form fields it understood. The page fills the 7-step wizard and moves to the first missing step (type → areas → budget → size), or to step 6 (notes + consent) once ready. Publishing still needs consent and sign-in.
 - **Files:** `src/assistant/buyerAssistant.ts` (system prompt built from `src/data.ts` values, JSON schema, output cleaning, per-IP limit), `app/api/buyer-assistant/route.ts` (GET `{enabled}`, POST `{messages,lang}`), `src/assistant/BuyerChat.tsx`, `applyAssistant` in `src/Marketplace.tsx`.
-- **Setting:** `OPENAI_API_KEY` (platform.openai.com → API keys) in `.dev.vars` and as a Cloudflare secret. Without it the chat is hidden and the panel shows only the title.
-- **Limits:** 600 characters per message, 20 messages per chat, 60 requests per IP per hour (D1 `login_attempts`, key `chat:<ip>`). Message text is not logged. It never asks for names or phone numbers; the account provides them.
+- **Setting:** `OPENAI_API_KEY` (platform.openai.com → API keys) in `.env.local` and as a Vercel/Railway environment variable. Without it the chat is hidden and the panel shows only the title.
+- **Limits:** 600 characters per message, 20 messages per chat, 60 requests per IP per hour (Postgres `login_attempts`, key `chat:<ip>`). Message text is not logged. It never asks for names or phone numbers; the account provides them.
 - **Cost:** roughly $0.06 per buyer conversation on Claude Opus 5.5 (system prompt cached).
 
 ## Accounts (October 2026)
 Buyers and sellers need a website account (e-mail + password) to publish a request, send an offer or ask us to keep looking. Browsing stays open.
-- **Storage:** Cloudflare D1 database `belmazad` (binding `DB`, ID in `vite.config.ts` and `d1.wrangler.jsonc`). Schema in `db/schema.ts` (Drizzle): `users`, `sessions`, `submissions`, `login_attempts`. HubSpot stays the CRM.
-  - New migration: change `db/schema.ts`, run `pnpm db:generate`, then `pnpm db:migrate` (remote, before deploying) — `pnpm db:migrate:local` for the local copy. The WSL preview applies local migrations on start.
+- **Storage:** Postgres (`DATABASE_URL`). Schema in `db/schema.ts` (Drizzle): `users`, `sessions`, `submissions`, `login_attempts`; timestamps are milliseconds since epoch (bigint).
+  - New migration: change `db/schema.ts`, run `pnpm db:generate`, then `pnpm db:migrate` (needs `DATABASE_URL`) before deploying.
 - **Server** (`src/auth/`): `password.ts` (PBKDF2-SHA256, 100,000 iterations), `accounts.ts` (sign-up, sign-in, sessions, `userRoute` wrapper, `recordSubmission`), `tracking.ts` (statuses from HubSpot).
   - Sessions: random token in an HttpOnly `bm_user` cookie (30 days, SameSite=Lax); only its SHA-256 is stored, so sign-out, password change and disabling take effect at once.
-  - Brute-force brake in D1: 5 failed sign-ins per e-mail or 30 per IP in 15 minutes (mobile networks share IPs).
+  - Brute-force brake in Postgres: 5 failed sign-ins per e-mail or 30 per IP in 15 minutes (mobile networks share IPs).
   - Routes: `/api/auth/signup|login|logout|me`, `/api/account` (GET profile + submissions, PATCH profile), `/api/account/password`.
 - **Submissions:** `/api/buyer-request`, `/api/seller-response` and `/api/seller-search` return 401 without a session. Name, mobile and broker details come from the account, never from the form. The account's e-mail is set on new HubSpot contacts and added to existing ones that have none (never overwritten). Each live submission is stored in `submissions` with its BM reference, HubSpot contact and deal IDs and a snapshot of what was sent. Sample (demo) posts stay local and are not stored.
 - **Public UI:** `src/account/AuthDialog.tsx` (Sign in / Create account tabs, "أنت وسيط عقاري (بروكر)؟" checkbox with brokerage name), `useAccount.ts`, and `/account` (`src/account/AccountApp.tsx`): profile, password change, "My requests" and "My offers" with statuses. Header: name or "Sign in" (phone menu below 800 px). Forms show "Sending as … · edit my details". The wizard's answers are kept while the buyer signs in, then it publishes.
@@ -131,13 +131,14 @@ The broker choice now lives on the account: "أنت وسيط عقاري (برو�
 - **Newest buyer requests** (buyer view only): the four newest real requests that state a size or budget, as cards with a category colour on top. Sellers get the full feed right after the tiles instead.
 - Colours for the photo overlays and glass (`--photo-shade`, `--glass-fill`, `--fx-cyan`, …) are tokens in the "Futuristic layer" at the end of `src/styles.css`.
 
-## Running the preview in WSL (October 2026)
-Windows Smart App Control is on and blocks the unsigned `workerd.exe` that the Cloudflare/Vinext dev runtime needs, so the dev server runs inside WSL (Ubuntu) instead. Production builds (`pnpm build`) still run on Windows.
-- **Start:** the `belmazad-dev` entry in `.claude/launch.json` runs `scripts/wsl-dev.sh` through `wsl.exe`. It copies the project sources and `.dev.vars` to `~/belmazad` in Ubuntu, keeps that copy in sync every second while it runs, installs packages when the lockfile changes, and starts the dev server. Open http://localhost:5173 as usual.
-- **The Windows folder stays the source of truth.** Edit files there; Ubuntu has its own `node_modules`. Excluded from the copy: `node_modules`, `.git`, `.vinext`, `dist`, `.wrangler` and the 1.3 GB `.sites-runtime` package cache.
-- **One-time setup (done on 7 October 2026):** `wsl --install` (needs administrator and a restart), then Node 24 from nodejs.org in `/opt/node` with Corepack's pnpm, then `pnpm install --frozen-lockfile` in `~/belmazad`. On a slow connection add `--fetch-timeout=900000 --network-concurrency=4`.
-- The old Windows entry is kept as `belmazad-dev-windows`, for a machine without Smart App Control.
-- `.gitattributes` keeps `*.sh` files in LF line endings so they run in Linux.
+## Deploying (Vercel / Railway)
+The site is a standard Next.js app (`next build` / `next start`), so it runs on Vercel, Railway or any Node/Docker host. Nothing is tied to one provider except the settings below.
+- **Database:** any Postgres. Create one (Neon, Supabase, Railway Postgres or Vercel's Marketplace), copy its connection string into `DATABASE_URL` (use the pooled URL on Vercel), then run `DATABASE_URL=... pnpm db:migrate` once, and again whenever `drizzle/` gets a new migration.
+- **Environment variables** (Vercel → Project → Settings → Environment Variables, or Railway → Variables): `DATABASE_URL`, `HUBSPOT_ACCESS_TOKEN`, `ADMIN_PASSWORD`, `OPENAI_API_KEY`; optional `ADMIN_SESSION_SECRET`, `OPENAI_MODEL`, `WISHLIST_ID_SALT`, `HUBSPOT_TASK_OWNER_IDS`. Template: `.env.example`.
+- **Vercel:** import the GitHub repo; the Next.js preset works unchanged (install `pnpm install --frozen-lockfile`, build `pnpm build`). Set the Node version to 22 or newer.
+- **Railway:** a Dockerless Nixpacks/Railpack deploy works with build `pnpm build` and start `pnpm start`; Railway sets `PORT` automatically.
+- **Moving the old Cloudflare D1 accounts:** export D1 (`wrangler d1 export belmazad --remote --no-schema --output d1.sql`) and load the rows into Postgres (`users`, `sessions`, `submissions`, `login_attempts`; booleans become `true/false`). Existing prototype accounts can also simply be re-created.
+- Cached HubSpot data (`src/hubspot/feed.ts`) lives per server instance, so on Vercel each function instance fetches HubSpot at most once a minute.
 
 ## Brand logo (October 2026)
 - Official logo files supplied by the owner in `public/logos/`: `logo-ar-blue`, `logo-ar-white`, `logo-en-blue`, `logo-en-white` (PNG, transparent).

@@ -1,5 +1,5 @@
 // Server-only: data and actions for the admin "Buyers" section (wishlist approvals).
-import {env} from 'cloudflare:workers';
+import {env} from '@/src/env';
 import {hubspot} from '../hubspot/client';
 import {getWishlist,invalidateWishlist} from '../hubspot/feed';
 import {LISTING_PROPERTIES,toDemand,type WishlistContact} from '../hubspot/wishlist';

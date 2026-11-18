@@ -1,5 +1,5 @@
-// Server-only: website accounts for buyers and sellers (Cloudflare D1, db/schema.ts).
-// E-mail + password sign-in; sessions are random tokens in an HttpOnly cookie, stored hashed in D1 so signing out
+// Server-only: website accounts for buyers and sellers (Postgres, db/schema.ts).
+// E-mail + password sign-in; sessions are random tokens in an HttpOnly cookie, stored hashed in Postgres so signing out
 // or disabling an account takes effect at once. Every request or offer is tied to the signed-in account.
 import {eq,lt} from 'drizzle-orm';
 import {getDb} from '@/db';
@@ -52,7 +52,7 @@ async function startSession(userId:number,request:Request){
 export async function currentUser(request:Request):Promise<User|null>{
  const token=tokenOf(request);if(!token)return null;
  const db=getDb();
- const row=await db.select({user:users,expiresAt:sessions.expiresAt}).from(sessions).innerJoin(users,eq(users.id,sessions.userId)).where(eq(sessions.tokenHash,await sha256(token))).get();
+ const row=await db.select({user:users,expiresAt:sessions.expiresAt}).from(sessions).innerJoin(users,eq(users.id,sessions.userId)).where(eq(sessions.tokenHash,await sha256(token))).then(r=>r[0]);
  if(!row||row.expiresAt<Date.now()||row.user.disabled)return null;
  return row.user;
 }
@@ -66,13 +66,13 @@ export async function endAllSessions(userId:number){await getDb().delete(session
 // ---- brute-force brake: failed sign-ins per e-mail and per IP in 15 minutes ----
 async function locked(keys:string[]){
  const db=getDb(),now=Date.now();
- for(const key of keys){const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).get();if(a&&a.count>=lockAfter(key)&&now-a.windowStart<LOCK_MS)return true;}
+ for(const key of keys){const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).then(r=>r[0]);if(a&&a.count>=lockAfter(key)&&now-a.windowStart<LOCK_MS)return true;}
  return false;
 }
 async function noteFailure(keys:string[]){
  const db=getDb(),now=Date.now();
  for(const key of keys){
-  const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).get();
+  const a=await db.select().from(loginAttempts).where(eq(loginAttempts.key,key)).then(r=>r[0]);
   if(!a)await db.insert(loginAttempts).values({key,count:1,windowStart:now});
   else await db.update(loginAttempts).set(now-a.windowStart>LOCK_MS?{count:1,windowStart:now}:{count:a.count+1}).where(eq(loginAttempts.key,key));
  }
@@ -84,8 +84,8 @@ export class AuthError extends Error{} // 'exists' | 'invalid' | 'locked' | 'dis
 export async function signUp(input:Record<string,unknown>,request:Request){
  const email=validEmail(input.email),password=validPassword(input.password),profile=validProfile(input);
  const db=getDb();
- if(await db.select({id:users.id}).from(users).where(eq(users.email,email)).get())throw new AuthError('exists');
- const user=await db.insert(users).values({email,passwordHash:await hashPassword(password),...profile,createdAt:Date.now()}).returning().get();
+ if(await db.select({id:users.id}).from(users).where(eq(users.email,email)).then(r=>r[0]))throw new AuthError('exists');
+ const user=await db.insert(users).values({email,passwordHash:await hashPassword(password),...profile,createdAt:Date.now()}).returning().then(r=>r[0]);
  return {user,cookie:await startSession(user.id,request)};
 }
 
@@ -93,7 +93,7 @@ export async function signIn(input:Record<string,unknown>,request:Request){
  const email=text(input.email,200).toLowerCase(),password=typeof input.password==='string'?input.password:'';
  const keys=[`ip:${clientIp(request)}`,`email:${email}`];
  if(await locked(keys))throw new AuthError('locked');
- const user=await getDb().select().from(users).where(eq(users.email,email)).get();
+ const user=await getDb().select().from(users).where(eq(users.email,email)).then(r=>r[0]);
  const ok=await verifyPassword(password,user?.passwordHash??DUMMY_HASH);
  if(!user||!ok){await noteFailure(keys);throw new AuthError('invalid');}
  if(user.disabled)throw new AuthError('disabled');
@@ -102,7 +102,7 @@ export async function signIn(input:Record<string,unknown>,request:Request){
 }
 
 export async function updateProfile(user:User,input:Record<string,unknown>){
- return getDb().update(users).set(validProfile(input)).where(eq(users.id,user.id)).returning().get();
+ return getDb().update(users).set(validProfile(input)).where(eq(users.id,user.id)).returning().then(r=>r[0]);
 }
 
 export async function changePassword(user:User,input:Record<string,unknown>,request:Request){
