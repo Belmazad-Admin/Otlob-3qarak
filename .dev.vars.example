@@ -12,5 +12,7 @@ ADMIN_PASSWORD=
 # Optional: any random string; changes the public BM-xxxx request IDs if set.
 # WISHLIST_ID_SALT=
 
-# Buyer chat assistant (Claude). From console.anthropic.com > API keys. Without it the chat is hidden.
-ANTHROPIC_API_KEY=
+# Buyer chat assistant (OpenAI). From platform.openai.com > API keys. Without it the chat is hidden.
+OPENAI_API_KEY=
+# Optional: OpenAI model for the chat (default gpt-5-mini).
+# OPENAI_MODEL=

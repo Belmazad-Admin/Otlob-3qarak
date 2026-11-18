@@ -90,9 +90,9 @@ The admin is a private team page; the HubSpot data it shows is never sent to the
 - **Buyer's confirmation:** shows the real BM- reference and "reviewed by the team" steps. Nothing is added to the public feed before approval.
 
 ## Buyer chat assistant (October 2026)
-The blue "إيه العقار اللي في بالك؟" panel next to the wizard holds a chat. The buyer writes freely (Egyptian Arabic or English); Claude (`claude-opus-5-5`, effort low, structured JSON output, server-side refusal fallback) replies in one to three sentences, asks for the most important missing detail, and returns the form fields it understood. The page fills the 7-step wizard and moves to the first missing step (type → areas → budget → size), or to step 6 (notes + consent) once ready. Publishing still needs consent and sign-in.
+The blue "إيه العقار اللي في بالك؟" panel next to the wizard holds a chat. The buyer writes freely (Egyptian Arabic or English); OpenAI (default `gpt-5-mini`, override with `OPENAI_MODEL`; low reasoning effort, strict structured JSON output) replies in one to three sentences, asks for the most important missing detail, and returns the form fields it understood. The page fills the 7-step wizard and moves to the first missing step (type → areas → budget → size), or to step 6 (notes + consent) once ready. Publishing still needs consent and sign-in.
 - **Files:** `src/assistant/buyerAssistant.ts` (system prompt built from `src/data.ts` values, JSON schema, output cleaning, per-IP limit), `app/api/buyer-assistant/route.ts` (GET `{enabled}`, POST `{messages,lang}`), `src/assistant/BuyerChat.tsx`, `applyAssistant` in `src/Marketplace.tsx`.
-- **Setting:** `ANTHROPIC_API_KEY` (console.anthropic.com → API keys) in `.dev.vars` and as a Cloudflare secret. Without it the chat is hidden and the panel shows only the title.
+- **Setting:** `OPENAI_API_KEY` (platform.openai.com → API keys) in `.dev.vars` and as a Cloudflare secret. Without it the chat is hidden and the panel shows only the title.
 - **Limits:** 600 characters per message, 20 messages per chat, 60 requests per IP per hour (D1 `login_attempts`, key `chat:<ip>`). Message text is not logged. It never asks for names or phone numbers; the account provides them.
 - **Cost:** roughly $0.06 per buyer conversation on Claude Opus 5.5 (system prompt cached).
 

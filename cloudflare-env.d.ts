@@ -13,8 +13,10 @@ declare namespace Cloudflare {
     ADMIN_PASSWORD?: string;
     /** Optional secret for signing admin sessions (defaults to one derived from the password and HubSpot key). */
     ADMIN_SESSION_SECRET?: string;
-    /** Anthropic API key for the buyer chat assistant (server-only). Without it the chat is hidden. */
-    ANTHROPIC_API_KEY?: string;
+    /** OpenAI API key for the buyer chat assistant (server-only). Without it the chat is hidden. */
+    OPENAI_API_KEY?: string;
+    /** Optional OpenAI model override for the buyer chat assistant (default gpt-5-mini). */
+    OPENAI_MODEL?: string;
     /** Optional salt for the anonymised public request IDs. */
     WISHLIST_ID_SALT?: string;
   }

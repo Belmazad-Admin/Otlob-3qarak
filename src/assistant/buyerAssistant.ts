@@ -1,7 +1,6 @@
-// Server-only: the buyer chat assistant ("إيه العقار اللي في بالك؟" panel). Claude reads what the buyer writes in
+// Server-only: the buyer chat assistant ("إيه العقار اللي في بالك؟" panel). The model reads what the buyer writes in
 // Egyptian Arabic or English and returns a short reply plus the wizard fields it understood (structured output);
 // the browser fills the 7-step request form with them. It never collects names, phones or e-mails (the account does).
-import Anthropic from '@anthropic-ai/sdk';
 import {env} from 'cloudflare:workers';
 import {eq} from 'drizzle-orm';
 import {getDb} from '@/db';
@@ -9,9 +8,10 @@ import {loginAttempts} from '@/db/schema';
 import {label} from '../content';
 import {areas,features,propertyTypes,residential} from '../data';
 
-export const MODEL='claude-opus-5-5';
+// Model is overridable with the OPENAI_MODEL setting; the default is a small, cheap model that suits form-filling chat.
+export const DEFAULT_MODEL='gpt-5-mini';
 const MAX_TURNS=20,MAX_CHARS=600,PER_IP_PER_HOUR=60;
-export const assistantConfigured=()=>!!env.ANTHROPIC_API_KEY;
+export const assistantConfigured=()=>!!env.OPENAI_API_KEY;
 export class AssistantInputError extends Error{}
 
 export type ChatTurn={role:'user'|'assistant';text:string};
@@ -93,17 +93,17 @@ function clean(out:AssistantReply):AssistantReply{
 }
 
 export async function askAssistant(turns:ChatTurn[],lang:'ar'|'en'):Promise<AssistantReply>{
- const client=new Anthropic({apiKey:env.ANTHROPIC_API_KEY});
- const response=await client.beta.messages.create({
-  model:MODEL,max_tokens:8000,
-  betas:['server-side-fallback-2026-07-01'],fallbacks:'default', // a false-positive safety decline is retried on another model
-  system:[{type:'text',text:SYSTEM,cache_control:{type:'ephemeral'}}],
-  messages:turns.map(t=>({role:t.role,content:t.text})),
-  output_config:{effort:'low',format:{type:'json_schema',schema:SCHEMA}}});
- if(response.stop_reason==='refusal'||response.stop_reason==='max_tokens')throw new Error(`assistant stopped: ${response.stop_reason}`);
- const block=response.content.find((b):b is Anthropic.Beta.BetaTextBlock=>b.type==='text');
- if(!block)throw new Error('assistant: no text');
- const out=clean(JSON.parse(block.text) as AssistantReply);
+ const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+  headers:{'content-type':'application/json',authorization:`Bearer ${env.OPENAI_API_KEY}`},
+  body:JSON.stringify({
+   model:env.OPENAI_MODEL||DEFAULT_MODEL,max_completion_tokens:8000,reasoning_effort:'low',
+   messages:[{role:'system',content:SYSTEM},...turns.map(t=>({role:t.role,content:t.text}))],
+   response_format:{type:'json_schema',json_schema:{name:'buyer_assistant_reply',strict:true,schema:SCHEMA}}})});
+ if(!res.ok)throw new Error(`assistant: OpenAI HTTP ${res.status}`);
+ const data=await res.json() as {choices?:{finish_reason?:string;message?:{content?:string|null;refusal?:string|null}}[]};
+ const choice=data.choices?.[0];
+ if(!choice?.message?.content||choice.message.refusal||choice.finish_reason==='length'||choice.finish_reason==='content_filter')throw new Error(`assistant stopped: ${choice?.finish_reason??'no choice'}`);
+ const out=clean(JSON.parse(choice.message.content) as AssistantReply);
  if(!out.reply)out.reply=lang==='ar'?'تمام، كمّل لي.':'Got it, tell me more.';
  return out;
 }
