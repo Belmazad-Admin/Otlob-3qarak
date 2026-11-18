@@ -47,3 +47,4 @@ next-env.d.ts
 
 # pnpm store from the previous setup
 /.sites-runtime/
+*.tsbuildinfo
