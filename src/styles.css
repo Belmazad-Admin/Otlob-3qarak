@@ -486,3 +486,31 @@ footer .logo{--logo-h:64px}
  .request-list .post-stats strong small{font-size:13px}
  .request-list .post-bottom{grid-area:stats;align-self:end;margin:0;padding:0 18px 14px;border-top:0}
 }
+/* Buyer chat assistant in the blue "What property is on your mind?" panel (October 2026). */
+.wizard-intro{display:flex;flex-direction:column}
+.chat{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;margin-top:22px;color:var(--on-fill)}
+.chat-log{flex:1;display:flex;flex-direction:column;gap:10px;min-height:150px;max-height:420px;overflow-y:auto;padding:4px 2px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--on-fill) 30%,transparent) transparent}
+.chat-log::-webkit-scrollbar{width:6px}.chat-log::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--on-fill) 30%,transparent);border-radius:6px}.chat-log::-webkit-scrollbar-button{display:none}
+.chat-msg{display:flex;align-items:flex-start;gap:8px;max-width:92%;margin:0;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.75}
+.chat-msg>span{display:block;min-width:0;overflow-wrap:anywhere}
+.chat-msg svg{flex:none;margin-top:.35em;opacity:.85}
+.chat-msg.assistant{align-self:flex-start;background:color-mix(in srgb,var(--on-fill) 13%,transparent);border-start-start-radius:4px}
+.chat-msg.user{align-self:flex-end;background:var(--white);color:var(--ink);border-start-end-radius:4px}
+.chat-typing span{opacity:.8;animation:pulse 1.2s ease-in-out infinite}
+.chat-filled{display:flex;align-items:flex-start;gap:5px;margin-top:6px;font-size:12px;line-height:1.6;opacity:.88}
+.chat-filled svg{flex:none;margin-top:.25em}
+.chat-examples{display:flex;flex-wrap:wrap;gap:6px}
+.chat-examples button{padding:6px 11px;border:1px solid color-mix(in srgb,var(--on-fill) 35%,transparent);border-radius:999px;background:transparent;color:var(--on-fill);font-size:12px;text-align:start;transition:background-color .18s var(--ease)}
+.chat-examples button:hover{background:color-mix(in srgb,var(--on-fill) 12%,transparent)}
+.chat-notice{margin:0;padding:8px 11px;border-radius:10px;background:var(--soft-orange);color:var(--error);font-size:13px}
+.chat-form{display:flex;align-items:flex-end;gap:8px;padding:6px;border-radius:14px;background:var(--white)}
+.chat-form textarea{flex:1;min-height:40px;max-height:120px;padding:9px 8px;border:0;background:transparent;color:var(--ink);font-size:15px;line-height:1.5;resize:none;field-sizing:content}
+.chat-form textarea:focus{outline:none}
+.chat-form:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--on-fill) 45%,transparent)}
+.chat-send{display:grid;place-items:center;flex:none;width:40px;height:40px;border:0;border-radius:10px;background:var(--blue-fill);color:var(--on-fill)}
+.chat-send:disabled{opacity:.45}
+[dir=rtl] .chat-send svg{transform:scaleX(-1)}
+.chat-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;opacity:.8}
+.chat-foot button{display:inline-flex;align-items:center;gap:4px;flex:none;padding:2px;border:0;background:none;color:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:800px){.chat-log{max-height:300px}}
+@media(prefers-reduced-motion:reduce){.chat-typing span{animation:none}}

@@ -10,6 +10,8 @@ import {submitRequest,SignInRequired} from './api';
 import ThemeToggle from './ThemeToggle';
 import AuthDialog,{type AuthReason} from './account/AuthDialog';
 import {useAccount,type AccountUser} from './account/useAccount';
+import BuyerChat from './assistant/BuyerChat';
+import type {AssistantFields} from './assistant/buyerAssistant';
 type Feed={status:'loading'|'demo'|'live'|'error';requests:Demand[];updatedAt?:string;at:number};
 const FEED_REFRESH_MS=60_000;
 // Newest first; requests without a date (this browser's demo posts) stay on top.
@@ -90,7 +92,25 @@ export default function Marketplace({initialAudience='buyer'}:{initialAudience?:
   }else{updateSeller({...(finderType?{type:finderType,bedrooms:0,bathrooms:0}:{}),...(finderArea?{location:finderArea}:{})});scroll('matching');}
  };
  const showCategory=(g:TypeGroup)=>{setFilter(g);setQuery('');setLimit(FEED_PAGE);scroll('requests');};
- const changeStep=(s:number)=>{setStep(s);setError('');setTimeout(()=>heading.current?.focus(),40);};
+ // focus=false when the chat assistant moves the wizard, so typing in the chat isn't interrupted.
+ const changeStep=(s:number,focus=true)=>{setStep(s);setError('');if(focus)setTimeout(()=>heading.current?.focus(),40);};
+ // Chat assistant → wizard: apply what it understood, then show the first step still missing
+ // (or the notes/consent step once the essentials are known; publishing still needs consent and sign-in).
+ const applyAssistant=(f:AssistantFields,ready:boolean)=>{
+  const patch:Partial<PropertyRequest>={};
+  if(f.type)Object.assign(patch,{type:f.type},!residential.includes(f.type)?{bedrooms:0,bathrooms:0,floor:''}:{});
+  if(f.locations.length)patch.locations=f.locations;
+  if(f.budgetMin||f.budgetMax){const max=f.budgetMax??Math.max(f.budgetMin!,r.budgetMax),min=f.budgetMin??Math.min(Math.round(max*.6),r.budgetMin);Object.assign(patch,{budgetMin:Math.min(min,max),budgetMax:max});}
+  if(f.sizeMin||f.sizeMax){const min=f.sizeMin??f.sizeMax!,max=f.sizeMax??min;Object.assign(patch,{sizeMin:Math.min(min,max),sizeMax:Math.max(min,max)});}
+  if(f.bedrooms!=null)patch.bedrooms=f.bedrooms;
+  if(f.bathrooms!=null)patch.bathrooms=f.bathrooms;
+  if(f.features.length)patch.features=f.features;
+  if(f.notes)patch.notes=f.notes;
+  setR(v=>({...v,...patch}));
+  // Judge by what the buyer actually said: the form's default budget and size don't count as answers.
+  const target=ready?6:!f.type?1:!f.locations.length?2:!f.budgetMax&&!f.budgetMin?3:!f.sizeMin&&!f.sizeMax?4:5;
+  if(target!==step)changeStep(target,false);
+ };
  const next=async()=>{const e=validateStep(step,r);if(e){setError(t[e as 'error']);return;}if(step<7){changeStep(step+1);return;}requireAuth('request',publish);};
  // The wizard's answers stay in state while the buyer signs in; publishing continues right after.
  const publish=async()=>{setBusy(true);setError('');try{const result=await submitRequest(r);setSuccessLive(!result.demo);
@@ -155,7 +175,7 @@ export default function Marketplace({initialAudience='buyer'}:{initialAudience?:
 
  {audience==='seller'&&feedSection}
 
- {audience==='buyer'&&<section className="wizard-section shell" id="request"><div className="wizard-intro"><h2>{t.wizardTitle}</h2><p>{t.wizardDesc}</p></div><div className="wizard"><div className="wizard-progress"><span>{t.step} {num(step)} {t.of} {num(7)}</span><strong>{t.wizardSteps[step-1]}</strong></div><div className="progress-track" role="progressbar" aria-label={t.progressLabel} aria-valuenow={step} aria-valuemin={1} aria-valuemax={7}><span style={{width:`${step/7*100}%`}}/></div><div className="wizard-body" key={step}><h3 ref={heading} tabIndex={-1}>{t.wizardTitles[step-1]}</h3>
+ {audience==='buyer'&&<section className="wizard-section shell" id="request"><div className="wizard-intro"><h2>{t.wizardTitle}</h2><p>{t.wizardDesc}</p><BuyerChat lang={lang} onFields={applyAssistant}/></div><div className="wizard"><div className="wizard-progress"><span>{t.step} {num(step)} {t.of} {num(7)}</span><strong>{t.wizardSteps[step-1]}</strong></div><div className="progress-track" role="progressbar" aria-label={t.progressLabel} aria-valuenow={step} aria-valuemin={1} aria-valuemax={7}><span style={{width:`${step/7*100}%`}}/></div><div className="wizard-body" key={step}><h3 ref={heading} tabIndex={-1}>{t.wizardTitles[step-1]}</h3>
   {step===1&&<div className="type-groups">{TYPE_GROUPS.map(([g,types])=><div key={g} className="type-group" role="group" aria-labelledby={`tg-${g}`}><h4 id={`tg-${g}`}>{t[g]}</h4><div className="must-chips">{types.map(p=><button key={p} className={r.type===p?'selected':''} aria-pressed={r.type===p} onClick={()=>update({type:p,...(!residential.includes(p)?{bedrooms:0,bathrooms:0,floor:''}:{})})}><PropertyIcon type={p} size={26}/>{l(p)}</button>)}</div></div>)}</div>}
  {step===2&&<><label className="searchbox"><Search size={18}/><input placeholder={t.areaSearch} aria-label={t.areaSearch} value={areaQuery} onChange={e=>setAreaQuery(e.target.value)}/></label><div className="area-options">{areas.filter(a=>l(a).toLowerCase().includes(areaQuery.toLowerCase())).map(a=><label className="check-option" key={a}><input type="checkbox" checked={r.locations.includes(a)} onChange={()=>update({locations:r.locations.includes(a)?r.locations.filter(x=>x!==a):[...r.locations,a]})}/><MapPin size={16}/>{l(a)}</label>)}</div><small>{num(r.locations.length)} {t.selected}</small></>}
  {step===3&&<><div className="field-pair"><Field title={`${t.min} (${t.egp})`}><input inputMode="numeric" value={r.budgetMin?r.budgetMin.toLocaleString('en-US'):''} onChange={e=>update({budgetMin:Number(e.target.value.replace(/[^0-9]/g,''))})}/></Field><Field title={`${t.max} (${t.egp})`}><input inputMode="numeric" value={r.budgetMax?r.budgetMax.toLocaleString('en-US'):''} onChange={e=>update({budgetMax:Number(e.target.value.replace(/[^0-9]/g,''))})}/></Field></div><label className="range-label">{t.max}<input type="range" min="1000000" max="200000000" step="500000" value={r.budgetMax} onChange={e=>update({budgetMax:Number(e.target.value)})}/></label><div className="range-ends"><span>1 {t.million}</span><span>200 {t.million}</span></div><div className="budget-display">{money(r.budgetMin)}–{money(r.budgetMax)} <small>{t.million}</small></div></>}

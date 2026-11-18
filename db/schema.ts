@@ -36,7 +36,8 @@ export const submissions=sqliteTable('submissions',{
  createdAt:integer('created_at').notNull(),
 },t=>[index('submissions_user').on(t.userId),index('submissions_contact').on(t.hubspotContactId)]);
 
-// Failed sign-ins per IP and per e-mail (5 per 15 minutes), shared by all Worker instances.
+// Rate counters shared by all Worker instances: failed sign-ins per IP and per e-mail, and buyer-chat requests
+// per IP (key "chat:<ip>").
 export const loginAttempts=sqliteTable('login_attempts',{
  key:text('key').primaryKey(),
  count:integer('count').notNull(),

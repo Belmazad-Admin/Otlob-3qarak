@@ -11,3 +11,6 @@ ADMIN_PASSWORD=
 # HUBSPOT_TASK_OWNER_IDS=33163566,1824975088
 # Optional: any random string; changes the public BM-xxxx request IDs if set.
 # WISHLIST_ID_SALT=
+
+# Buyer chat assistant (Claude). From console.anthropic.com > API keys. Without it the chat is hidden.
+ANTHROPIC_API_KEY=
