@@ -1,5 +1,5 @@
 // Server-only: cached Buyer Wishlist, shared by the public feed, seller responses and the team admin.
-import {env} from 'cloudflare:workers';
+import {env} from '@/src/env';
 import {hubspot} from './client';
 import {CONTACT_PROPERTIES,WISHLIST_SOURCE,isPublishable,listingStatus,toDemand,type ListingStatus,type WishlistContact} from './wishlist';
 import type {Demand} from '../data';

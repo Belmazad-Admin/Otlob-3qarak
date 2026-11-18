@@ -14,8 +14,8 @@ export class AccountError extends Error{}
 export async function listAccounts(){
  const db=getDb();
  const [all,perKind]=await Promise.all([
-  db.select().from(users).all(),
-  db.select({userId:submissions.userId,kind:submissions.kind,n:count()}).from(submissions).groupBy(submissions.userId,submissions.kind).all()]);
+  db.select().from(users),
+  db.select({userId:submissions.userId,kind:submissions.kind,n:count()}).from(submissions).groupBy(submissions.userId,submissions.kind)]);
  const counts=new Map<number,{requests:number;offers:number}>();
  for(const r of perKind){const c=counts.get(r.userId)??{requests:0,offers:0};if(r.kind==='buyer_request')c.requests+=r.n;else c.offers+=r.n;counts.set(r.userId,c);}
  return all.sort((a,b)=>b.createdAt-a.createdAt).map(u=>({id:u.id,name:u.name,email:u.email,phone:'0'+u.phone,broker:u.isBroker,company:u.company,disabled:u.disabled,
@@ -23,7 +23,7 @@ export async function listAccounts(){
 }
 
 export async function accountDetail(id:number){
- const user=await getDb().select().from(users).where(eq(users.id,id)).get();
+ const user=await getDb().select().from(users).where(eq(users.id,id)).then(r=>r[0]);
  if(!user)throw new AccountError('not-found');
  const items=(await track(await submissionsOf([id]))).map(s=>({...s,contactUrl:s.contactId?contactUrl(s.contactId):'',dealUrl:s.dealId?dealUrl(s.dealId):''}));
  return {id:user.id,items};
@@ -32,14 +32,14 @@ export async function accountDetail(id:number){
 // A one-time temporary password for the team to give the user; every session of the account is signed out.
 export async function resetPassword(id:number){
  const password=temporaryPassword();
- const r=await getDb().update(users).set({passwordHash:await hashPassword(password)}).where(eq(users.id,id)).returning({id:users.id}).get();
+ const r=await getDb().update(users).set({passwordHash:await hashPassword(password)}).where(eq(users.id,id)).returning({id:users.id}).then(r=>r[0]);
  if(!r)throw new AccountError('not-found');
  await endAllSessions(id);
  return password;
 }
 
 export async function setDisabled(id:number,disabled:boolean){
- const r=await getDb().update(users).set({disabled}).where(eq(users.id,id)).returning({id:users.id}).get();
+ const r=await getDb().update(users).set({disabled}).where(eq(users.id,id)).returning({id:users.id}).then(r=>r[0]);
  if(!r)throw new AccountError('not-found');
  if(disabled)await endAllSessions(id);
 }
@@ -50,8 +50,8 @@ export async function accountsByContact(){
  try{
   const db=getDb();
   const [fromUsers,fromSubs]=await Promise.all([
-   db.select({contact:users.hubspotContactId,id:users.id,email:users.email}).from(users).where(isNotNull(users.hubspotContactId)).all(),
-   db.select({contact:submissions.hubspotContactId,id:users.id,email:users.email}).from(submissions).innerJoin(users,eq(users.id,submissions.userId)).where(isNotNull(submissions.hubspotContactId)).all()]);
+   db.select({contact:users.hubspotContactId,id:users.id,email:users.email}).from(users).where(isNotNull(users.hubspotContactId)),
+   db.select({contact:submissions.hubspotContactId,id:users.id,email:users.email}).from(submissions).innerJoin(users,eq(users.id,submissions.userId)).where(isNotNull(submissions.hubspotContactId))]);
   for(const r of [...fromSubs,...fromUsers])if(r.contact)out.set(r.contact,{id:r.id,email:r.email});
  }catch(error){console.error('accounts lookup:',error instanceof Error?error.message:error);} // no database: rows simply have no link
  return out;

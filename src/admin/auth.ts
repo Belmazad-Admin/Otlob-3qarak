@@ -1,7 +1,7 @@
 // Server-only: team login for /admin. One shared password (ADMIN_PASSWORD) for now; each session also
 // carries the reviewer's name so approvals are attributed. Sessions are HMAC-signed, HttpOnly cookies.
-// Production plan: put Cloudflare Access in front of /admin as well (see HANDOFF.md).
-import {env} from 'cloudflare:workers';
+// Production plan: put an access layer with 2FA in front of /admin as well (see HANDOFF.md).
+import {env} from '@/src/env';
 
 const COOKIE='bm_admin',SESSION_MS=12*60*60_000;
 const enc=new TextEncoder();

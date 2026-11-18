@@ -1,4 +1,4 @@
-// Server-only: password hashing with PBKDF2-SHA256 (Web Crypto). 100,000 iterations is the Cloudflare Workers maximum.
+// Server-only: password hashing with PBKDF2-SHA256 (Web Crypto). 100,000 iterations (the limit on edge runtimes; plenty for a Node host).
 // Stored as pbkdf2$<iterations>$<salt b64url>$<hash b64url>.
 const ITERATIONS=100_000;
 const enc=new TextEncoder();
