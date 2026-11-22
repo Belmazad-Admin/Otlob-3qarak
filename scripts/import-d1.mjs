@@ -13,6 +13,9 @@ const url=process.env.DATABASE_URL;
 if(!url){console.error('DATABASE_URL is not set.');process.exit(1);}
 
 const lite=new DatabaseSync(':memory:');
+// D1 exports tables alphabetically, so sessions/submissions rows come before the users table exists.
+// Foreign keys are switched off while the dump loads; Postgres still checks them on the way in.
+lite.exec('PRAGMA foreign_keys=OFF');
 lite.exec(readFileSync(file,'utf8'));
 
 // Parents first, so the user_id foreign keys resolve. Boolean columns were stored as 0/1 in SQLite.
@@ -25,6 +28,8 @@ const tables=[
 
 const sql=postgres(url,{prepare:false,max:1,onnotice:()=>{}});
 try{
+ const [{exists}]=await sql`select to_regclass('public.users') is not null as exists`;
+ if(!exists)throw new Error('The tables do not exist in Postgres yet. Run the migration (pnpm db:migrate) first.');
  const [{n}]=await sql`select count(*)::int as n from users`;
  if(n>0)throw new Error(`Postgres already has ${n} account(s); refusing to import on top of them.`);
  await sql.begin(async tx=>{
@@ -40,6 +45,15 @@ try{
    console.log(`${t.name}: ${rows.length} row(s)`);
   }
  });
- console.log('Import finished.');
-}catch(error){console.error('Import failed, nothing was written:',error.message);process.exitCode=1;}
+ // Read the totals back from Postgres, so it is clear the data really arrived before d1.sql is deleted.
+ let ok=true;
+ for(const t of tables){
+  const expected=lite.prepare(`select count(*) as n from "${t.name}"`).get().n;
+  const [{n:actual}]=await sql`select count(*)::int as n from ${sql(t.name)}`;
+  if(actual!==expected)ok=false;
+  console.log(`check ${t.name}: export ${expected}, Postgres ${actual} ${actual===expected?'OK':'MISMATCH'}`);
+ }
+ if(!ok)throw new Error('Row counts do not match. Keep d1.sql and do not delete anything.');
+ console.log('Import finished and verified. It is now safe to delete d1.sql.');
+}catch(error){console.error('Import failed:',error.message);process.exitCode=1;}
 finally{await sql.end();}
