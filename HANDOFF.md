@@ -137,7 +137,7 @@ The site is a standard Next.js app (`next build` / `next start`), so it runs on 
 - **Environment variables** (Vercel → Project → Settings → Environment Variables, or Railway → Variables): `DATABASE_URL`, `HUBSPOT_ACCESS_TOKEN`, `ADMIN_PASSWORD`, `OPENAI_API_KEY`; optional `ADMIN_SESSION_SECRET`, `OPENAI_MODEL`, `WISHLIST_ID_SALT`, `HUBSPOT_TASK_OWNER_IDS`. Template: `.env.example`.
 - **Vercel:** import the GitHub repo; the Next.js preset works unchanged (install `pnpm install --frozen-lockfile`, build `pnpm build`). Set the Node version to 22 or newer.
 - **Railway:** a Dockerless Nixpacks/Railpack deploy works with build `pnpm build` and start `pnpm start`; Railway sets `PORT` automatically.
-- **Moving the old Cloudflare D1 accounts:** export D1 (`wrangler d1 export belmazad --remote --no-schema --output d1.sql`) and load the rows into Postgres (`users`, `sessions`, `submissions`, `login_attempts`; booleans become `true/false`). Existing prototype accounts can also simply be re-created.
+- **Moving the old Cloudflare D1 accounts:** export D1 with its schema (`npx wrangler d1 export belmazad --remote --output d1.sql`), run `pnpm db:migrate` on the new Postgres, then `DATABASE_URL=... node scripts/import-d1.mjs d1.sql`. The script copies `users`, `sessions`, `submissions` and `login_attempts` in one transaction, converts the 0/1 flags to booleans, continues the ID counters, and refuses to run if Postgres already has accounts. Delete `d1.sql` afterwards (it holds password hashes). Existing prototype accounts can also simply be re-created.
 - Cached HubSpot data (`src/hubspot/feed.ts`) lives per server instance, so on Vercel each function instance fetches HubSpot at most once a minute.
 
 ## Brand logo (October 2026)

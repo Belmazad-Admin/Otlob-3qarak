@@ -48,3 +48,6 @@ next-env.d.ts
 # pnpm store from the previous setup
 /.sites-runtime/
 *.tsbuildinfo
+
+# D1 export used by scripts/import-d1.mjs (contains password hashes)
+/d1.sql
