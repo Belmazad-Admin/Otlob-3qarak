@@ -1,6 +1,6 @@
 // Server-only: a buyer's request from the website wizard → HubSpot contact (Pending) + review task for the team.
 // It appears in Admin → Buyers → Pending and only goes public after approval.
-import {env} from 'cloudflare:workers';
+import {env} from '@/src/env';
 import {hubspot} from './client';
 import {invalidateWishlist} from './feed';
 import {publicId} from './wishlist';

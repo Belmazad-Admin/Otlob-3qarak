@@ -7,7 +7,7 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 - Plan and agree before building anything significant. Finish and test one piece before starting the next.
 - Explain things step by step and in plain language. The owner tests manually and shares screenshots.
 - Ask before creating anything in HubSpot (properties, pipelines, test records) or sending real test submissions.
-- Never print or repeat secrets (HubSpot key, admin password). Refer to `.dev.vars` by name only.
+- Never print or repeat secrets (HubSpot key, admin password). Refer to `.env.local` by name only.
 
 ## Where things are
 - Project folder: `N:\Belmazad\Otlob Aqarak`. It is the true version, from `belmazad-claude-code.zip` in the same folder. The older ChatGPT-handoff version is backed up in `N:\Belmazad\Otlob Aqarak (old version backup)`; don't work from it.
@@ -15,12 +15,12 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
   - Buyer view: http://localhost:5173/request-property
   - Seller view: http://localhost:5173/request-property?for=sellers
   - Team admin: http://localhost:5173/admin
-  - Settings in `.dev.vars` are read only at start-up; restart `pnpm dev` after changing them.
-- Settings (`.dev.vars`, never committed; template in `.dev.vars.example`): `HUBSPOT_ACCESS_TOKEN` (HubSpot service key "Belmazad Website") and `ADMIN_PASSWORD`.
+  - Settings in `.env.local` are read only at start-up; restart `pnpm dev` after changing them.
+- Settings (`.env.local`, never committed; template in `.env.example`): `HUBSPOT_ACCESS_TOKEN` (HubSpot service key "Belmazad Website") and `ADMIN_PASSWORD`.
 - HubSpot: portal 143644884 (EU, app-eu1.hubspot.com).
   - Service key scopes: crm.objects.contacts.read/write, crm.objects.deals.read/write, crm.schemas.contacts.write, crm.schemas.deals.write.
 - Git: GitHub `Belmazad-Admin/Otlob-3qarak` (private). The owner wants commits pushed straight to `main`. `gh` is signed in as Belmazad-Admin.
-- Hosting: Cloudflare account belmazad@gmail.com. Worker `belmazad-request` → https://belmazad-request.belmazad-b9d.workers.dev (`pnpm deploy`; on Windows PowerShell use `npx.cmd`). D1 database `belmazad`. The domain belmazad.com's DNS is at CloudSmartly, not Cloudflare.
+- Hosting: moving from Cloudflare Workers to **Vercel** (Railway possible later); the code is now plain Next.js + Postgres (`DATABASE_URL`). See `HANDOFF.md` → "Deploying (Vercel / Railway)". The domain belmazad.com's DNS is at CloudSmartly.
 - Preview server: `.claude/launch.json` defines `belmazad-dev` on port 5173. If another conversation's preview already holds the port, that server serves this same folder and picks up changes live.
 
 ## Decisions made
@@ -29,14 +29,14 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
   - Main CTA: "لاقي مشتري عقارك / Find your buyer". Never "اعرض عقارك", because the main site already handles listings.
   - The buyer pool is called **"serious buyers / مشترين جادين"**.
 - **No unconfirmed claims** in seller copy: no "free", "qualified" or response-time promises (the owner didn't confirm them).
-- **HubSpot is the system of record** for requests and offers. Website accounts (e-mail + password) live in Cloudflare D1 (12 October 2026; replaces the earlier Supabase idea).
+- **HubSpot is the system of record** for requests and offers. Website accounts (e-mail + password) live in Postgres (`DATABASE_URL`; first built on Cloudflare D1 in October 2026).
 - **Buyer wishlists:** HubSpot contacts from the "Buyer Wishlist Form", plus requests submitted through the website wizard.
   - Public posts are anonymised: no names, phones, record IDs or raw staff notes.
   - Area, district and budget are parsed from staff notes on the server.
   - **Only Approved requests are public** (contact property `website_listing_status`).
 - **Tasks** go to both Khadija owners: Khadeja Hesham 33163566 (active) and Khadija Hesham 1824975088 (inactive, but HubSpot accepted it). Titles start with "[Website]", or "[Website] [Broker]" for brokers.
 - **Seller offers and "keep looking"** become deals in the HubSpot pipeline "Website seller offers" (New offer → Contacted → Viewing → Negotiating → Won / Rejected), plus call tasks.
-- **Admin login:** a shared team password plus the person's name. Production plan: Cloudflare Access (@belmazad.com, 2FA) in front of `/admin`.
+- **Admin login:** a shared team password plus the person's name. Production plan: put `/admin` behind an access layer with 2FA (e.g. Vercel Deployment Protection or an SSO proxy).
 - **Brokers:** "أنت وسيط عقاري (بروكر)؟" plus brokerage name on the account (sign-up or My account) → User Type = Broker, Company = brokerage. Broker dashboards are a later phase.
 - **Design (redesign, October 2026):**
   - **Homes.com-style structure with a futuristic finish (5 October 2026):** full-width dusk photo hero with the header floating over it, a glass finder (buying/selling tabs, type, area) that pre-fills the wizard or the matching tool, photo tiles per category with live counts, and a "Newest buyer requests" row. New Unsplash photos are credited in `HANDOFF.md`.
@@ -59,8 +59,8 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 
 ## Waiting on the owner
 1. Test the broker option.
-2. Change `ADMIN_PASSWORD` in `.dev.vars`. The current one was visible in a screenshot. Then restart the dev server.
-3. Before going online: rotate the HubSpot service key ("Rotate" on the key page) and update `.dev.vars` and the server settings.
+2. Change `ADMIN_PASSWORD` in `.env.local`. The current one was visible in a screenshot. Then restart the dev server.
+3. Before going online: rotate the HubSpot service key ("Rotate" on the key page) and update `.env.local` and the server settings.
 
 ## Current work: full UI/UX redesign (in progress)
 The owner asked for a premium, modern, easy-to-use redesign of every page, with light and dark modes. Rules: keep all features, routes, workflows, HubSpot connections and data; usability before decoration.
@@ -97,7 +97,7 @@ Owner decisions: e-mail + password; buyers sign in when they click Publish (answ
 - **Limit:** HubSpot keeps one wishlist per contact, so a buyer's newer request replaces the older one there; the account keeps the history ("Replaced by a newer request"). Several live requests per buyer would need buyer requests as HubSpot deals.
 
 ## Later phases (discussed)
-- Go online: hosting is live on workers.dev; still to do: secrets on Cloudflare, a belmazad.com address (DNS move from CloudSmartly), Cloudflare Access on /admin.
+- Go online: deploy on Vercel (Postgres + environment variables), a belmazad.com address (DNS move from CloudSmartly), protection for /admin; GitHub Actions CI/CD to follow.
 - E-mail sending (verification, password reset, notifications).
 - Move to the newer HubSpot API versions before the March/September 2027 deprecation shown on the key page.
 - Production assets: official logo, licensed photos, licensed Neue Haas Grotesk font.

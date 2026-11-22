@@ -1,7 +1,7 @@
 'use client';
 // Buyer chat assistant in the blue "What property is on your mind?" panel. The buyer writes freely (Arabic or English);
 // /api/buyer-assistant (Claude) replies and returns the form fields it understood, which the page applies to the
-// 7-step wizard. Hidden when the server has no ANTHROPIC_API_KEY. Nothing here is published by itself.
+// 7-step wizard. Hidden when the server has no OPENAI_API_KEY. Nothing here is published by itself.
 import {useEffect,useRef,useState} from 'react';
 import {Send,Sparkles,Check,RotateCcw} from 'lucide-react';
 import {content,label,type Lang} from '../content';

@@ -5,10 +5,10 @@
 You are continuing an existing working front-end prototype. Preserve its core model and visual direction unless Mahmoud asks for a change. The product is a reverse property marketplace: buyers publish demand; owners and brokers discover requests; an AI-style demo ranks matches. This is the page itself, not a concept presentation.
 
 ## Run and verify
-- Node.js >=22.13. Use `npx pnpm@11.19.0 install --frozen-lockfile`, then `npx pnpm@11.19.0 dev`.
-- Run `npx pnpm@11.19.0 build` before handoff. The prototype uses React 19, TypeScript, Tailwind v4 and Vinext/Cloudflare's local Vite runtime.
+- Node.js >=22.13. Use `npx pnpm@11.19.0 install --frozen-lockfile`, then `npx pnpm@11.19.0 dev` (copy `.env.example` to `.env.local` first; a local Postgres is needed for accounts, then `pnpm db:migrate`).
+- Run `npx pnpm@11.19.0 build` before handoff. The prototype uses React 19, TypeScript, Tailwind v4 and Next.js 16 (App Router).
 - The root `/` redirects to `/request-property`.
-- A local copy has `.openai/hosting.json` with a null project ID to avoid editing the existing privately hosted Site by accident. This copy is hosted on Cloudflare Workers (`belmazad-request`); deploy with `pnpm deploy` after `pnpm db:migrate` when there are new migrations.
+- Hosting is portable: plain Next.js on Node (Vercel today, Railway later, any Docker/Node host). Settings are ordinary environment variables read through `src/env.ts`; the database is Postgres via `DATABASE_URL`. Deploy steps are in `HANDOFF.md`, "Deploying (Vercel / Railway)". Run `pnpm db:migrate` before deploying when there are new migrations.
 
 ## Required experience
 - Arabic-first RTL and English LTR; language toggle updates document direction. All bilingual strings and option labels live in `src/content.ts`.
@@ -18,9 +18,9 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 - Mobile layout has a sticky action bar and a full-height wizard. Keyboard focus and reduced-motion rules matter.
 - The buyer request feed is live from HubSpot (see "HubSpot wishlist feed" in `HANDOFF.md`) when `HUBSPOT_ACCESS_TOKEN` is set; the sample requests in `src/data.ts` appear only when it is not. Never send HubSpot names, phones, e-mails, owners, record IDs or the raw `additional_requirments` note to the browser — only the fields produced by `src/hubspot/wishlist.ts`.
 - Seller matching ranks those buyer requests with a deterministic front-end score, not a real AI service.
-- The buyer chat assistant (blue wizard panel) is real AI: Claude via `app/api/buyer-assistant/route.ts` and `src/assistant/*`, enabled only when `ANTHROPIC_API_KEY` is set. It only fills the wizard; it never publishes, and never collects contact details.
+- The buyer chat assistant (blue wizard panel) is real AI: OpenAI (Chat Completions, structured output) via `app/api/buyer-assistant/route.ts` and `src/assistant/*`, enabled only when `OPENAI_API_KEY` is set. It only fills the wizard; it never publishes, and never collects contact details.
 - Buyer wizard submission (`/api/buyer-request`, `src/hubspot/buyerRequest.ts`) creates/updates a HubSpot contact as Pending plus a "[Website] Review new buyer request" task; it is public only after approval in /admin. Without a HubSpot token it stays a local demo. Seller responses on live HubSpot posts are real (they create HubSpot tasks); on sample posts they remain a local demo. Payments, notifications/e-mail, rental, seller dashboard and real listings are outside this reference.
-- Buyer/seller accounts (e-mail + password, Cloudflare D1): publishing a request, sending an offer and "keep looking" require sign-in; name, mobile and broker details always come from the account on the server, never from the form. Never send password hashes, session tokens or HubSpot IDs to the browser.
+- Buyer/seller accounts (e-mail + password, Postgres): publishing a request, sending an offer and "keep looking" require sign-in; name, mobile and broker details always come from the account on the server, never from the form. Never send password hashes, session tokens or HubSpot IDs to the browser.
 
 ## Source map
 - `src/Marketplace.tsx` — page UI, wizard, demand feed, seller demo and dialogs.
@@ -31,7 +31,7 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 - `src/hubspot/wishlist.ts` — server-only mapping and note parsing into anonymised `Demand` posts; `src/hubspot/feed.ts` — shared cache; `src/hubspot/client.ts` — HubSpot REST helper.
 - `app/api/seller-response/route.ts` + `src/hubspot/sellerResponse.ts` — seller offers on live posts become HubSpot tasks (seller contact found/created, duplicate-checked).
 - `app/admin/page.tsx`, `src/admin/*`, `app/api/admin/*` — team admin (Buyers approvals, Sellers offers, Accounts), password + signed-cookie session (`src/admin/auth.ts`). Every admin API goes through `adminRoute`.
-- `db/schema.ts` + `drizzle/` (migrations; `pnpm db:generate`, `pnpm db:migrate`), `src/auth/*` (accounts, sessions, statuses), `app/api/auth/*`, `app/api/account/*` (every signed-in API goes through `userRoute`), `src/account/*` + `app/account/page.tsx` (sign-in window, My account).
+- `db/schema.ts` + `drizzle/` (Postgres schema and migrations; `pnpm db:generate`, `pnpm db:migrate`), `src/env.ts` (server settings), `src/auth/*` (accounts, sessions, statuses), `app/api/auth/*`, `app/api/account/*` (every signed-in API goes through `userRoute`), `src/account/*` + `app/account/page.tsx` (sign-in window, My account).
 - `scripts/hubspot-setup.mjs`, `scripts/hubspot-seed-statuses.mjs` — HubSpot properties/pipeline setup and first statuses.
 - `src/styles.css` — semantic tokens, typography, responsive layout and motion.
 - `app/request-property/page.tsx`, `app/page.tsx`, `app/layout.tsx` — route and metadata.

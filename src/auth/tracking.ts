@@ -51,5 +51,5 @@ export async function track(rows:Submission[]):Promise<TrackedSubmission[]>{
 
 export async function submissionsOf(userIds:number[]){
  if(!userIds.length)return [];
- return getDb().select().from(submissions).where(userIds.length===1?eq(submissions.userId,userIds[0]):inArray(submissions.userId,userIds)).orderBy(desc(submissions.createdAt)).all();
+ return getDb().select().from(submissions).where(userIds.length===1?eq(submissions.userId,userIds[0]):inArray(submissions.userId,userIds)).orderBy(desc(submissions.createdAt));
 }
