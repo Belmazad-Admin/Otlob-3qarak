@@ -1,6 +1,6 @@
 # Project status — belmazad.com "Request a Property"
 
-Read this first when continuing work in a new conversation. Last updated: 12 October 2026.
+Read this first when continuing work in a new conversation. Last updated: 25 November 2026.
 Technical details for each feature are in `HANDOFF.md`; project rules are in `CLAUDE.md`.
 
 ## Working with the owner (preferences)
@@ -81,10 +81,10 @@ The owner asked for a premium, modern, easy-to-use redesign of every page, with 
    - header with a phone menu ✅ (4 October 2026; built and checked, not yet tested by the owner)
    - hero with real HubSpot numbers instead of made-up ones; demo bar folded in ✅ (same)
    - cleaner request cards; fake controls removed, filters and search working ✅ (4 October 2026; built and checked, not yet tested by the owner)
-   - wizard: per-field error messages, sticky Next on phones. The goal step is already removed (4 October 2026); the wizard now has 7 steps
+   - wizard: per-field error messages ✅ (25 November 2026: each step names the exact field, outlines it in red and moves the cursor there; same checks on the server), sticky Next on phones ✅ (the bottom "اطلب عقارك" bar slides away while the wizard or seller matching tool is on screen, so Back/Next sit at the bottom edge). The goal step is already removed (4 October 2026); the wizard now has 7 steps
    - "عندي العقار ده" directly on match results ✅ (7 October 2026; opens the offer form pre-filled with size and price from the matching form)
    - fix the offer form wording ✅ (seller-specific notes hint)
-   - polished dialogs, FAQ, footer and mobile, with photos
+   - polished dialogs, FAQ, footer and mobile, with photos ✅ (25 November 2026: request dialog now tells sellers the buyer's details are private (it showed the buyer's privacy note); FAQ intro line, clearer questions, out-of-date "demo" answers replaced; footer with readable tagline, site links and a divider; phone layout checked at 375 px). Checked in the browser preview, not yet by the owner on a real phone
 3. **Admin dashboard** restyled with the same system.
 4. **Testing:** every flow (buyer request → approve, offer, keep looking, broker, language, theme), phone, tablet and desktop, keyboard and reduced motion; build and commit.
 
@@ -108,6 +108,8 @@ Owner decisions: e-mail + password; buyers sign in when they click Publish (answ
 - HubSpot contact property `additional_requirments` rejects special characters, so the website writes a plain letters/numbers version.
 - `scripts/hubspot-setup.mjs` (safe to re-run) creates the HubSpot properties and pipeline. `scripts/hubspot-seed-statuses.mjs` was already run once (5 Pending / 80 Approved / 11 Rejected).
 - Lint: only "use next/image" hints remain (hero, tiles and seller photos; the site serves plain images). The issues inherited from the original zip were fixed in Phase 2. Typecheck and build pass.
+- The preview (`.claude/launch.json`) runs `npx --yes pnpm@11.19.0 dev`, so it works without pnpm on PATH.
+- The dev server on the N: drive sometimes misses edits to `src/styles.css` (most often edits made from a shell). If a style change doesn't show, save the file again from the editor or restart the dev server.
 - Don't run `pnpm build` while the dev server is running: it breaks the dev server (every page returns "internal error"). Stop the preview, build, then start it again.
 - The browser preview pane can't show phone layouts reliably; check on a real phone.
 - In a hidden or background preview tab, the theme's colour fade can stall and leave the page background looking unchanged. In a visible browser it switches normally. The colour values themselves are correct.

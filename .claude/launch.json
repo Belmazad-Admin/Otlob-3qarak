@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "belmazad-dev",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "pnpm@11.19.0", "dev"],
       "port": 5173
     }
   ]
