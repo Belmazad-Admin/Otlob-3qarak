@@ -56,9 +56,11 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 | Broker checkbox in all three forms, Broker badge in the admin | Built. The owner was about to test it |
 | Redesign Phase 1: light/dark themes, theme toggle (site and admin), IBM Plex Sans Arabic, consistent buttons, fields, glass and cards | Done and committed (`a0bee38`). Checked in both themes in the browser |
 | Accounts: sign-in window before offers, "keep looking" and publishing a request; broker checkbox; "My account" page; admin Accounts tab with every account's requests and offers, password reset, disable | Built 12 October 2026. Checked locally (sign-up, sign-in, lockout, account page, phone layout). Not yet tested end-to-end with a real HubSpot submission or by the owner |
+| Buyer chat spend tracking: token counts per day (no message text), estimated cost, hard daily cap (`OPENAI_DAILY_BUDGET_USD`, default $5), admin "AI chat" tab | Built 25 November 2026 after the ~$200 OpenAI charge on 23 Nov (investigation: the chat is very unlikely to be the source). Typecheck and build pass. Needs `pnpm db:migrate` on Neon before the next deploy |
 
 ## Waiting on the owner
 1. Test the broker option.
+1a. OpenAI charge of 23 Nov: check the receipt (ChatGPT subscription or API credit top-up?) and platform.openai.com → Usage for 22–23 Nov by model and API key; check Vercel → otlob-3qarak → Logs for `/api/buyer-assistant` from the owning account.
 2. Change `ADMIN_PASSWORD` in `.env.local`. The current one was visible in a screenshot. Then restart the dev server.
 3. Before going online: rotate the HubSpot service key ("Rotate" on the key page) and update `.env.local` and the server settings.
 

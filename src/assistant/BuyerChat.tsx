@@ -33,7 +33,7 @@ export default function BuyerChat({lang,onFields}:{lang:Lang;onFields:(fields:As
    if(res.ok&&data.reply&&data.fields){
     onFields(data.fields,!!data.ready);
     setTurns([...next,{role:'assistant',text:data.reply,filled:summary(data.fields)}]);
-   }else{setTurns(turns);setInput(message);setNotice(res.status===429?t.chatLimit:data.field==='too-long'?t.chatLong:t.chatError);}
+   }else{setTurns(turns);setInput(message);setNotice(res.status===429?t.chatLimit:data.status==='paused'?t.chatPaused:data.field==='too-long'?t.chatLong:t.chatError);}
   }catch{setTurns(turns);setInput(message);setNotice(t.chatError);}
   finally{setBusy(false);setTimeout(()=>box.current?.focus({preventScroll:true}),0);}
  }

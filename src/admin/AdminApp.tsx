@@ -1,7 +1,7 @@
 'use client';
 // Team admin: Buyers (wishlist approvals) and Sellers (offers). All data comes from /api/admin/* (HubSpot-backed).
 import {useCallback,useEffect,useMemo,useState} from 'react';
-import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home,UserRound,KeyRound,Ban,Mail} from 'lucide-react';
+import {Check,X,MessageSquare,ExternalLink,LogOut,RefreshCw,Search,MapPin,Phone,LockKeyhole,Eye,RotateCcw,Save,Send,Users,Home,UserRound,KeyRound,Ban,Mail,Sparkles} from 'lucide-react';
 import {label} from '../content';
 import PropertyIcon from '../PropertyIcon';
 import BrandLogo from '../BrandLogo';
@@ -33,7 +33,7 @@ async function api<T>(url:string,init?:RequestInit):Promise<T>{
 
 export default function AdminApp(){
  const [me,setMe]=useState<{configured:boolean;user:{name:string}|null}|null>(null);
- const [tab,setTab]=useState<'buyers'|'sellers'|'accounts'>('buyers');
+ const [tab,setTab]=useState<'buyers'|'sellers'|'accounts'|'ai'>('buyers');
  const [focusAccount,setFocusAccount]=useState<number|null>(null);
  const openAccount=useCallback((id:number)=>{setFocusAccount(id);setTab('accounts');},[]);
  const check=useCallback(()=>{api<{configured:boolean;user:{name:string}|null}>('/api/admin/session').then(setMe).catch(()=>setMe({configured:false,user:null}));},[]);
@@ -42,9 +42,9 @@ export default function AdminApp(){
  if(!me.user)return <Login configured={me.configured} onDone={check}/>;
  return <div className="adm">
   <header className="adm-top"><span className="adm-brand" role="img" aria-label="belmazad.com team admin"><BrandLogo lang="en"/> <small>team admin</small></span>
-   <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button><button aria-pressed={tab==='accounts'} className={tab==='accounts'?'on':''} onClick={()=>{setFocusAccount(null);setTab('accounts');}}><UserRound size={16}/>Accounts</button></nav>
+   <nav className="adm-tabs" aria-label="Sections"><button aria-pressed={tab==='buyers'} className={tab==='buyers'?'on':''} onClick={()=>setTab('buyers')}><Users size={16}/>Buyers</button><button aria-pressed={tab==='sellers'} className={tab==='sellers'?'on':''} onClick={()=>setTab('sellers')}><Home size={16}/>Sellers</button><button aria-pressed={tab==='accounts'} className={tab==='accounts'?'on':''} onClick={()=>{setFocusAccount(null);setTab('accounts');}}><UserRound size={16}/>Accounts</button><button aria-pressed={tab==='ai'} className={tab==='ai'?'on':''} onClick={()=>setTab('ai')}><Sparkles size={16}/>AI chat</button></nav>
    <ThemeToggle label="Switch light and dark mode"/><span className="adm-user"><LockKeyhole size={14}/>{me.user.name}<button className="adm-link" onClick={()=>api('/api/admin/session',{method:'DELETE'}).then(check)}><LogOut size={15}/>Log out</button></span></header>
-  {tab==='buyers'?<Buyers onAuthLost={check} openAccount={openAccount}/>:tab==='sellers'?<Sellers onAuthLost={check} openAccount={openAccount}/>:<Accounts key={focusAccount??'all'} focus={focusAccount} onAuthLost={check}/>}
+  {tab==='buyers'?<Buyers onAuthLost={check} openAccount={openAccount}/>:tab==='sellers'?<Sellers onAuthLost={check} openAccount={openAccount}/>:tab==='accounts'?<Accounts key={focusAccount??'all'} focus={focusAccount} onAuthLost={check}/>:<AiUsage onAuthLost={check}/>}
  </div>;
 }
 
@@ -260,4 +260,35 @@ function AccountDetail({a,onChanged,onAuthLost}:{a:Account;onChanged:()=>void;on
   <div className="adm-actions"><button className="adm-btn" disabled={!!busy} onClick={()=>act('reset')}><KeyRound size={16}/>{busy==='reset'?'Resetting…':'Reset password'}</button>
    {a.disabled?<button className="adm-btn approve" disabled={!!busy} onClick={()=>act('enable')}><Check size={16}/>{busy==='enable'?'Enabling…':'Enable account'}</button>:<button className="adm-btn reject" disabled={!!busy} onClick={()=>act('disable')}><Ban size={16}/>{busy==='disable'?'Disabling…':'Disable account'}</button>}</div>
  </section>;
+}
+
+// ---- AI chat: buyer-chat token totals and estimated OpenAI spend per day (no message text is stored) ----
+type UsageDay={day:string;requests:number;failed:number;refused:number;inputTokens:number;cachedTokens:number;outputTokens:number;reasoningTokens:number;costUsd:number};
+type UsageReport={today:string;budgetUsd:number;model:string;todayCostUsd:number;days:UsageDay[]};
+const usd=(n:number)=>{const d=n>0&&n<0.1?4:2;return `$${n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}`;};
+const count=(n:number)=>n.toLocaleString('en-US');
+
+function AiUsage({onAuthLost}:{onAuthLost:()=>void}){
+ const [data,setData]=useState<UsageReport|null>(null);const [error,setError]=useState('');
+ const load=useCallback(()=>{api<UsageReport>('/api/admin/assistant-usage').then(d=>{setData(d);setError('');}).catch(e=>{if((e as {status?:number}).status===401)onAuthLost();else setError('Could not load chat usage.');});},[onAuthLost]);
+ useEffect(()=>{load();},[load]);
+ const now=data?.days.find(d=>d.day===data.today);
+ const total=(data?.days??[]).reduce((s,d)=>s+d.costUsd,0);
+ const share=data&&data.budgetUsd>0?Math.min(100,Math.round(data.todayCostUsd/data.budgetUsd*100)):100;
+ const capped=!!data&&data.todayCostUsd>=data.budgetUsd;
+ return <main className="adm-main">
+  <div className="adm-bar"><div className="adm-chips"><span className="chip">Model <b>{data?.model??'…'}</b></span><span className="chip">Daily cap <b>{data?(data.budgetUsd>0?usd(data.budgetUsd):'chat off'):'…'}</b></span><span className="chip">Last 30 days <b>{data?usd(total):'…'}</b></span></div>
+   <button className="adm-btn" onClick={load}><RefreshCw size={15}/>Refresh</button></div>
+  {error&&<p className="adm-error" role="alert">{error}</p>}
+  <section className="adm-card adm-detail adm-usage" aria-label="Today">
+   <div className="adm-detail-head"><div><h2>Today ({data?.today??'…'} UTC)</h2>{capped&&<span className="badge rejected">Cap reached · chat paused until 00:00 UTC</span>}</div></div>
+   {data&&<><p><strong>{usd(data.todayCostUsd)}</strong> of {data.budgetUsd>0?usd(data.budgetUsd):'$0 (chat turned off)'} · {share}% of the daily cap</p>
+    <div className={`adm-meter${capped?' full':''}`} role="meter" aria-label="Share of today’s cap used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={share}><span style={{width:`${share}%`}}/></div>
+    <dl className="adm-private"><div><dt>Chat replies</dt><dd>{count(now?.requests??0)}{now?.failed?` (${now.failed} unusable)`:''}</dd></div><div><dt>Turned away by the cap</dt><dd>{count(now?.refused??0)}</dd></div>
+     <div><dt>Input tokens</dt><dd>{count(now?.inputTokens??0)} <small>({count(now?.cachedTokens??0)} cached)</small></dd></div><div><dt>Output tokens</dt><dd>{count(now?.outputTokens??0)} <small>({count(now?.reasoningTokens??0)} reasoning)</small></dd></div></dl></>}
+   <p className="adm-hint">Estimated from the token counts OpenAI returns with each reply and list prices; OpenAI’s own Usage page is the bill. Change the cap with the <code>OPENAI_DAILY_BUDGET_USD</code> setting (0 turns the chat off).</p>
+  </section>
+  <div className="adm-table-wrap"><table className="adm-table"><thead><tr><th>Day (UTC)</th><th>Replies</th><th>Unusable</th><th>Turned away</th><th>Input tokens</th><th>Output tokens</th><th>Est. cost</th></tr></thead>
+   <tbody>{!data?<tr><td colSpan={7} className="adm-empty">Loading…</td></tr>:!data.days.length?<tr><td colSpan={7} className="adm-empty">No chat use recorded yet.</td></tr>:data.days.map(d=><tr key={d.day}><td>{d.day}</td><td>{count(d.requests)}</td><td>{count(d.failed)}</td><td>{count(d.refused)}</td><td>{count(d.inputTokens)}</td><td>{count(d.outputTokens)}</td><td>{usd(d.costUsd)}</td></tr>)}</tbody></table></div>
+ </main>;
 }

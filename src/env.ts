@@ -16,6 +16,8 @@ export type AppEnv={
  OPENAI_API_KEY?:string;
  /** Optional OpenAI model override for the buyer chat assistant (default gpt-5-mini). */
  OPENAI_MODEL?:string;
+ /** Hard daily spend cap for the buyer chat in US dollars (default 5; 0 turns the chat off). Resets at 00:00 UTC. */
+ OPENAI_DAILY_BUDGET_USD?:string;
  /** Optional salt for the anonymised public request IDs. */
  WISHLIST_ID_SALT?:string;
 };

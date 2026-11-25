@@ -47,5 +47,19 @@ export const loginAttempts=pgTable('login_attempts',{
  windowStart:ms('window_start').notNull(),
 });
 
+// Buyer-chat spend: one row per UTC day with totals only (no message text, no IP, no user). Written after every
+// OpenAI reply; read by the daily spend cap (src/assistant/usage.ts) and the admin "AI chat" tab.
+export const assistantUsage=pgTable('assistant_usage',{
+ day:text('day').primaryKey(), // YYYY-MM-DD (UTC)
+ requests:integer('requests').notNull().default(0), // OpenAI calls that returned (billed), including unusable replies
+ failed:integer('failed').notNull().default(0), // of those, replies we could not use (cut off, refused, bad JSON)
+ refused:integer('refused').notNull().default(0), // chat messages turned away because the daily cap was reached
+ inputTokens:ms('input_tokens').notNull().default(0), // all prompt tokens, cached included
+ cachedTokens:ms('cached_tokens').notNull().default(0),
+ outputTokens:ms('output_tokens').notNull().default(0), // reasoning tokens included
+ reasoningTokens:ms('reasoning_tokens').notNull().default(0),
+ costMicros:ms('cost_micros').notNull().default(0), // estimated cost in millionths of a US dollar
+});
+
 export type User=typeof users.$inferSelect;
 export type Submission=typeof submissions.$inferSelect;

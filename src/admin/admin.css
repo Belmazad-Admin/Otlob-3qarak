@@ -56,4 +56,5 @@
 .badge.replaced,.badge.unknown{background:var(--surface);color:var(--muted)}
 .adm-temp{background:var(--pale-blue);border-radius:8px;padding:10px 12px;font-size:14px}
 .adm-temp code{font-size:16px;font-weight:700;letter-spacing:.04em;user-select:all}
-.adm-private dd .adm-link{display:inline-flex;align-items:center;gap:4px;padding:0}
+.adm-private dd .adm-link{display:inline-flex;align-items:center;gap:4px;padding:0}/* AI chat usage tab */
+.adm-usage{margin-bottom:16px}.adm-meter{height:10px;border-radius:6px;background:var(--surface);border:1px solid var(--line);overflow:hidden}.adm-meter span{display:block;height:100%;background:var(--blue-fill)}.adm-meter.full span{background:var(--error)}

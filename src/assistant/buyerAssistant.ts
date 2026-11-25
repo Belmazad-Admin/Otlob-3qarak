@@ -5,6 +5,7 @@ import {env} from '@/src/env';
 import {eq} from 'drizzle-orm';
 import {getDb} from '@/db';
 import {loginAttempts} from '@/db/schema';
+import {recordUsage,type OpenAIUsage} from './usage';
 import {label} from '../content';
 import {areas,features,propertyTypes,residential} from '../data';
 
@@ -93,17 +94,23 @@ function clean(out:AssistantReply):AssistantReply{
 }
 
 export async function askAssistant(turns:ChatTurn[],lang:'ar'|'en'):Promise<AssistantReply>{
+ const model=env.OPENAI_MODEL||DEFAULT_MODEL;
  const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
   headers:{'content-type':'application/json',authorization:`Bearer ${env.OPENAI_API_KEY}`},
   body:JSON.stringify({
-   model:env.OPENAI_MODEL||DEFAULT_MODEL,max_completion_tokens:8000,reasoning_effort:'low',
+   model,max_completion_tokens:8000,reasoning_effort:'low',
    messages:[{role:'system',content:SYSTEM},...turns.map(t=>({role:t.role,content:t.text}))],
    response_format:{type:'json_schema',json_schema:{name:'buyer_assistant_reply',strict:true,schema:SCHEMA}}})});
  if(!res.ok)throw new Error(`assistant: OpenAI HTTP ${res.status}`);
- const data=await res.json() as {choices?:{finish_reason?:string;message?:{content?:string|null;refusal?:string|null}}[]};
+ const data=await res.json() as {usage?:OpenAIUsage;choices?:{finish_reason?:string;message?:{content?:string|null;refusal?:string|null}}[]};
  const choice=data.choices?.[0];
- if(!choice?.message?.content||choice.message.refusal||choice.finish_reason==='length'||choice.finish_reason==='content_filter')throw new Error(`assistant stopped: ${choice?.finish_reason??'no choice'}`);
- const out=clean(JSON.parse(choice.message.content) as AssistantReply);
+ // Every reply that came back is billed, usable or not, so token counts are recorded before any check.
+ let parsed:AssistantReply|null=null;
+ const usable=!!choice?.message?.content&&!choice.message.refusal&&choice.finish_reason!=='length'&&choice.finish_reason!=='content_filter';
+ if(usable){try{parsed=JSON.parse(choice!.message!.content!) as AssistantReply;}catch{parsed=null;}}
+ await recordUsage(model,data.usage,!parsed);
+ if(!parsed)throw new Error(`assistant stopped: ${choice?.finish_reason??'no choice'}`);
+ const out=clean(parsed);
  if(!out.reply)out.reply=lang==='ar'?'تمام، كمّل لي.':'Got it, tell me more.';
  return out;
 }
