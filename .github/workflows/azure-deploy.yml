@@ -1,0 +1,65 @@
+# Deploys the site to Azure Container Apps on every push to main (Vercel keeps deploying separately until the
+# switch-over). Sign-in uses the managed identity id-belmazad-deploy through GitHub's short-lived OIDC token, so no
+# Azure password or key is stored in GitHub.
+#
+# Needs four repository variables (Settings → Secrets and variables → Actions → Variables), all printed by
+# infra/deploy.ps1: AZURE_CLIENT_ID (deployClientId), AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_REGISTRY
+# (registry name). Until they exist the job is skipped.
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: azure-deploy
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: Matchmaking_belmazad
+  APP_NAME: ca-belmazad
+
+jobs:
+  deploy:
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push the image
+        run: |
+          IMAGE="${{ vars.AZURE_REGISTRY }}.azurecr.io/belmazad:${{ github.sha }}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          az acr login --name "${{ vars.AZURE_REGISTRY }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Point the site at the new image
+        run: |
+          # The first deploy replaces Microsoft's sample (port 80) with the site (port 3000).
+          PORT=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP_NAME" --query properties.configuration.ingress.targetPort -o tsv)
+          if [ "$PORT" != "3000" ]; then az containerapp ingress update -g "$RESOURCE_GROUP" -n "$APP_NAME" --target-port 3000 -o none; fi
+          az containerapp update -g "$RESOURCE_GROUP" -n "$APP_NAME" --image "$IMAGE" -o none
+
+      - name: Check the site answers
+        run: |
+          URL="https://$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP_NAME" --query properties.configuration.ingress.fqdn -o tsv)"
+          for i in $(seq 1 30); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL/request-property" || true)
+            if [ "$CODE" = "200" ]; then echo "Live: $URL ($CODE)"; exit 0; fi
+            echo "Waiting for the new version ($CODE)…"; sleep 10
+          done
+          echo "The site did not answer 200 within 5 minutes. See: az containerapp logs show -g $RESOURCE_GROUP -n $APP_NAME"; exit 1

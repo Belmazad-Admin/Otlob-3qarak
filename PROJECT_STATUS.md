@@ -20,7 +20,7 @@ Technical details for each feature are in `HANDOFF.md`; project rules are in `CL
 - HubSpot: portal 143644884 (EU, app-eu1.hubspot.com).
   - Service key scopes: crm.objects.contacts.read/write, crm.objects.deals.read/write, crm.schemas.contacts.write, crm.schemas.deals.write.
 - Git: GitHub `Belmazad-Admin/Otlob-3qarak` (private). The owner wants commits pushed straight to `main`. `gh` is signed in as Belmazad-Admin.
-- Hosting: moving from Cloudflare Workers to **Vercel** (Railway possible later); the code is now plain Next.js + Postgres (`DATABASE_URL`). See `HANDOFF.md` → "Deploying (Vercel / Railway)". The domain belmazad.com's DNS is at CloudSmartly.
+- Hosting: live on **Vercel** (otlob-3qarak.vercel.app) with Neon Postgres. **Moving to Azure Container Apps** (owner decision 25 Nov 2026), resource group `Matchmaking_belmazad`, UAE North, subscription "NTG Microsoft Azure Sponsorship" (Mahmoud manages it; Nour has Contributor + RBAC Administrator on the resource group only, and changes need an MFA sign-in). App Service is blocked on that subscription (quota 0, support request open), so Container Apps was chosen; Azure Postgres replaces Neon; run both, then switch the domain. Status: code + `infra/` ready and previewed (22 resources to create, nothing created yet). Next: Nour runs `.\infra\deploy.ps1` with the real keys, then GitHub variables, first image deploy, copy accounts from Neon, test, domain. See `HANDOFF.md` → "Deploying to Azure Container Apps". The domain belmazad.com's DNS is at CloudSmartly.
 - Preview server: `.claude/launch.json` defines `belmazad-dev` on port 5173. If another conversation's preview already holds the port, that server serves this same folder and picks up changes live.
 
 ## Decisions made

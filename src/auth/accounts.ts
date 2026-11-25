@@ -6,6 +6,7 @@ import {getDb} from '@/db';
 import {users,sessions,loginAttempts,submissions,type User} from '@/db/schema';
 import {b64,hashPassword,verifyPassword,DUMMY_HASH} from './password';
 import {brokerFields,egyptianMobile,InputError} from '../hubspot/sellerResponse';
+import {clientIp} from '../clientIp';
 
 const COOKIE='bm_user',SESSION_MS=30*24*60*60_000;
 // 5 failures lock an e-mail; an IP gets 30, because mobile networks share one IP between many people.
@@ -77,7 +78,6 @@ async function noteFailure(keys:string[]){
   else await db.update(loginAttempts).set(now-a.windowStart>LOCK_MS?{count:1,windowStart:now}:{count:a.count+1}).where(eq(loginAttempts.key,key));
  }
 }
-const clientIp=(request:Request)=>request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')||'local';
 
 export class AuthError extends Error{} // 'exists' | 'invalid' | 'locked' | 'disabled'
 

@@ -1,3 +1,4 @@
+import {clientIp} from '@/src/clientIp';
 import {sameOrigin} from '@/src/auth/accounts';
 import {AssistantInputError,askAssistant,assistantConfigured,overLimit,validateChat} from '@/src/assistant/buyerAssistant';
 import {overBudget,recordRefused} from '@/src/assistant/usage';
@@ -17,7 +18,7 @@ export async function POST(request:Request){
  let paused=true;
  try{paused=await overBudget();}catch(error){console.error('assistant budget:',error instanceof Error?error.message:error);}
  if(paused){await recordRefused();return Response.json({status:'paused'},{status:503,headers:noStore});}
- const ip=request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')||'local';
+ const ip=clientIp(request);
  try{if(await overLimit(ip))return Response.json({status:'limit'},{status:429,headers:noStore});}
  catch(error){console.error('assistant limit:',error instanceof Error?error.message:error);}
  try{return Response.json({status:'ok',...await askAssistant(chat.turns,chat.lang)},{headers:noStore});}

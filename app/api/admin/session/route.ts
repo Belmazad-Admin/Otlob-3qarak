@@ -1,3 +1,4 @@
+import {clientIp} from '@/src/clientIp';
 import {adminConfigured,login,logoutCookie,session,tooManyAttempts} from '@/src/admin/auth';
 
 // GET: who is logged in. POST {password,name}: log in. DELETE: log out.
@@ -9,7 +10,7 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  const origin=request.headers.get('origin');
  if(origin&&new URL(origin).host!==new URL(request.url).host)return Response.json({error:'forbidden'},{status:403});
- const ip=request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')||'local';
+ const ip=clientIp(request);
  if(tooManyAttempts(ip))return Response.json({error:'locked'},{status:429,headers:noStore});
  const body=await request.json().catch(()=>({})) as {password?:unknown;name?:unknown};
  const name=typeof body.name==='string'?body.name.trim():'';

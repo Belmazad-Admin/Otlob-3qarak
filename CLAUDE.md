@@ -8,7 +8,7 @@ You are continuing an existing working front-end prototype. Preserve its core mo
 - Node.js >=22.13. Use `npx pnpm@11.19.0 install --frozen-lockfile`, then `npx pnpm@11.19.0 dev` (copy `.env.example` to `.env.local` first; a local Postgres is needed for accounts, then `pnpm db:migrate`).
 - Run `npx pnpm@11.19.0 build` before handoff. The prototype uses React 19, TypeScript, Tailwind v4 and Next.js 16 (App Router).
 - The root `/` redirects to `/request-property`.
-- Hosting is portable: plain Next.js on Node (Vercel today, Railway later, any Docker/Node host). Settings are ordinary environment variables read through `src/env.ts`; the database is Postgres via `DATABASE_URL`. Deploy steps are in `HANDOFF.md`, "Deploying (Vercel / Railway)". Run `pnpm db:migrate` before deploying when there are new migrations.
+- Hosting is portable: plain Next.js on Node (Vercel today, moving to Azure Container Apps via `Dockerfile` + `infra/`, any Docker/Node host). Settings are ordinary environment variables read through `src/env.ts`; the database is Postgres via `DATABASE_URL`. Deploy steps are in `HANDOFF.md`, "Deploying (Vercel / Railway)". Run `pnpm db:migrate` before deploying when there are new migrations.
 
 ## Required experience
 - Arabic-first RTL and English LTR; language toggle updates document direction. All bilingual strings and option labels live in `src/content.ts`.

@@ -1,0 +1,18 @@
+# Keep secrets, local state and build output out of the Docker build.
+.git
+.github
+.claude
+node_modules
+.next
+dist
+out
+coverage
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler
+*.zip
+*.pem
+tsconfig.tsbuildinfo
+infra
