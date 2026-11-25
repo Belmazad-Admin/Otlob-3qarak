@@ -33,6 +33,12 @@ param githubBranch string = 'main'
 @description('Container image to run. The first deploy uses Microsoft\'s public sample (listens on port 80) because the registry is still empty; GitHub Actions then switches to the real image.')
 param image string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
+@description('PostgreSQL size. B1ms (~$15/month) is the target; Standard_B2ats_v2 (~$38) is the fallback if Azure has no B1ms capacity in UAE North.')
+param postgresSku string = 'Standard_B1ms'
+
+@description('Availability zone for PostgreSQL ("1", "2" or "3"); empty lets Azure choose. Pinning a zone can get around a capacity shortage.')
+param postgresZone string = ''
+
 @description('PostgreSQL administrator login name.')
 param postgresAdminLogin string = 'belmazadadmin'
 
@@ -129,8 +135,8 @@ resource deployPushesImages 'Microsoft.Authorization/roleAssignments@2022-04-01'
 resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: 'pg-${name}-${suffix}'
   location: location
-  sku: { name: 'Standard_B1ms', tier: 'Burstable' }
-  properties: {
+  sku: { name: postgresSku, tier: 'Burstable' }
+  properties: union({
     version: '16'
     administratorLogin: postgresAdminLogin
     administratorLoginPassword: postgresAdminPassword
@@ -139,7 +145,7 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     highAvailability: { mode: 'Disabled' }
     authConfig: { activeDirectoryAuth: 'Disabled', passwordAuth: 'Enabled' }
     network: { publicNetworkAccess: 'Enabled' }
-  }
+  }, empty(postgresZone) ? {} : { availabilityZone: postgresZone })
 }
 
 resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {

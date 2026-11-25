@@ -17,6 +17,11 @@ param(
   [ValidateSet('vault', 'all')]
   [string]$Stage = 'all',
   [string]$ResourceGroup = 'Matchmaking_belmazad',
+  # Database size and zone (only needed if Azure reports "SkuNotAvailable"): e.g. -PostgresZone 1, or
+  # -PostgresSku Standard_B2ats_v2. Once the database exists, keep using the same values.
+  [string]$PostgresSku = 'Standard_B1ms',
+  [ValidateSet('', '1', '2', '3')]
+  [string]$PostgresZone = '',
   [switch]$WhatIf
 )
 $ErrorActionPreference = 'Stop'
@@ -66,6 +71,15 @@ $values = @{
   postgresAdminPassword = if ($pg) { $pg } else { New-Password }   # first run: a new random password
   hasAdminSessionSecret = [bool]($names -contains 'admin-session-secret')
   hasWishlistIdSalt     = [bool]($names -contains 'wishlist-id-salt')
+  postgresSku           = $PostgresSku
+  postgresZone          = $PostgresZone
+}
+# An existing database keeps its size and zone unless asked otherwise.
+$pgNow = Get-AzValue @('postgres', 'flexible-server', 'list', '-g', $ResourceGroup, '--query', '[0].{sku:sku.name,zone:availabilityZone}', '-o', 'tsv')
+if ($pgNow) {
+  $parts = $pgNow -split "`t"
+  if (-not $PSBoundParameters.ContainsKey('PostgresSku')) { $values.postgresSku = $parts[0] }
+  if (-not $PSBoundParameters.ContainsKey('PostgresZone') -and $parts.Count -gt 1) { $values.postgresZone = $parts[1] }
 }
 # Keep the real image on later runs (GitHub Actions sets it); the first run starts with Microsoft's sample page.
 $current = Get-AzValue @('containerapp', 'show', '-g', $ResourceGroup, '-n', 'ca-belmazad', '--query', 'properties.template.containers[0].image', '-o', 'tsv')
