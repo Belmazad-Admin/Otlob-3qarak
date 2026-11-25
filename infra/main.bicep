@@ -8,8 +8,8 @@
 //     id-belmazad-app    → used by the running site to pull its image and read its secrets from Key Vault.
 //     id-belmazad-deploy → used by GitHub Actions (federated sign-in, no stored secret) to push images and update
 //                          the site. Only pushes from the main branch of the GitHub repo are trusted.
-// - Key Vault (RBAC, purge protection on): every secret the site needs. Values come from secure parameters at
-//   deploy time (infra/deploy.ps1 asks for them); they are never written to a file in the repo.
+// - Key Vault (created first by infra/vault.bicep): every secret the site needs. The site keys are added one by one
+//   with infra/set-secret.ps1 (hidden input); this template only writes the two database secrets.
 // - PostgreSQL Flexible Server 16 (Burstable B1ms, 32 GB): accounts, sessions, submissions, chat usage.
 //   TLS is required. Public access is limited to Azure services, because Container Apps on the Consumption plan
 //   has no fixed outbound address; a private network (VNet) is the stricter option if needed later.
@@ -37,25 +37,16 @@ param image string = 'mcr.microsoft.com/k8se/quickstart:latest'
 param postgresAdminLogin string = 'belmazadadmin'
 
 @secure()
-@description('PostgreSQL administrator password. Kept in Key Vault; reuse the same value on later deploys.')
+@description('PostgreSQL administrator password. infra/deploy.ps1 generates it once and then reuses the copy in Key Vault.')
 param postgresAdminPassword string
 
-@secure()
-param hubspotAccessToken string
-@secure()
-param openaiApiKey string
-@secure()
-@description('Team admin password for /admin (min. 12 characters).')
-param adminPassword string
-@secure()
-@description('Optional. Empty = derived from the admin password and HubSpot key, as on Vercel.')
-param adminSessionSecret string = ''
-@secure()
-@description('Optional. Must match the value on Vercel (if any), or public BM- request IDs would change.')
-param wishlistIdSalt string = ''
-
-@description('Object ID of the person running the deploy (infra/deploy.ps1 fills it in). They get "Key Vault Secrets Officer" so they can update secrets later. Empty = skip.')
-param operatorPrincipalId string = ''
+// The site's own keys (HubSpot, OpenAI, admin password ...) are added to Key Vault beforehand with
+// infra/set-secret.ps1 and are never passed through this template. deploy.ps1 checks they exist and tells it which
+// optional ones are there.
+@description('True when Key Vault holds the optional secret "admin-session-secret".')
+param hasAdminSessionSecret bool = false
+@description('True when Key Vault holds the optional secret "wishlist-id-salt".')
+param hasWishlistIdSalt bool = false
 
 @description('Hard daily spend cap for the buyer chat, in US dollars.')
 param openaiDailyBudgetUsd string = '5'
@@ -69,7 +60,6 @@ var roles = {
   acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
   acrPush: '8311e382-0749-4cb8-b61a-304f252e45ec'
   keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6'
-  keyVaultSecretsOfficer: 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
   contributor: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 }
 
@@ -167,43 +157,23 @@ resource allowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@202
 
 var databaseUrl = 'postgres://${postgresAdminLogin}:${uriComponent(postgresAdminPassword)}@${postgres.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
 
-// ---------- Key Vault ----------
-resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+// ---------- Key Vault (created by infra/vault.bicep in step 1) ----------
+resource vault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: 'kv-${name}-${suffix}'
-  location: location
-  properties: {
-    tenantId: subscription().tenantId
-    sku: { family: 'A', name: 'standard' }
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 90
-    enablePurgeProtection: true
-    publicNetworkAccess: 'Enabled'
-  }
 }
 
-// The connection string needs the server's address, which is only known during the deployment, so it is its own
-// resource rather than part of the loop below.
+// The two database secrets are written here because the connection string needs the server's address.
 resource databaseUrlSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: vault
   name: 'database-url'
   properties: { value: databaseUrl }
 }
 
-// Secret name in Key Vault → value. Optional ones are only stored when given.
-var secretValues = union({
-  'postgres-admin-password': postgresAdminPassword
-  'hubspot-access-token': hubspotAccessToken
-  'openai-api-key': openaiApiKey
-  'admin-password': adminPassword
-}, empty(adminSessionSecret) ? {} : { 'admin-session-secret': adminSessionSecret },
-  empty(wishlistIdSalt) ? {} : { 'wishlist-id-salt': wishlistIdSalt })
-
-resource secrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = [for s in items(secretValues): {
+resource postgresPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: vault
-  name: s.key
-  properties: { value: s.value }
-}]
+  name: 'postgres-admin-password'
+  properties: { value: postgresAdminPassword }
+}
 
 resource appReadsSecrets 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(vault.id, appIdentity.id, roles.keyVaultSecretsUser)
@@ -215,15 +185,6 @@ resource appReadsSecrets 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   }
 }
 
-resource operatorManagesSecrets 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(operatorPrincipalId)) {
-  name: guid(vault.id, operatorPrincipalId, roles.keyVaultSecretsOfficer)
-  scope: vault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsOfficer)
-    principalId: operatorPrincipalId
-    principalType: 'User'
-  }
-}
 
 // ---------- Container Apps ----------
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -247,8 +208,8 @@ var secretEnv = union({
   HUBSPOT_ACCESS_TOKEN: 'hubspot-access-token'
   OPENAI_API_KEY: 'openai-api-key'
   ADMIN_PASSWORD: 'admin-password'
-}, empty(adminSessionSecret) ? {} : { ADMIN_SESSION_SECRET: 'admin-session-secret' },
-  empty(wishlistIdSalt) ? {} : { WISHLIST_ID_SALT: 'wishlist-id-salt' })
+}, !hasAdminSessionSecret ? {} : { ADMIN_SESSION_SECRET: 'admin-session-secret' },
+  !hasWishlistIdSalt ? {} : { WISHLIST_ID_SALT: 'wishlist-id-salt' })
 var secretEnvVars = [for s in items(secretEnv): { name: s.key, secretRef: s.value }]
 
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
@@ -258,7 +219,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
     type: 'UserAssigned'
     userAssignedIdentities: { '${appIdentity.id}': {} }
   }
-  dependsOn: [ appPullsImages, appReadsSecrets, secrets, databaseUrlSecret, database, allowAzure ]
+  dependsOn: [ appPullsImages, appReadsSecrets, databaseUrlSecret, postgresPasswordSecret, database, allowAzure ]
   properties: {
     environmentId: environment.id
     workloadProfileName: 'Consumption'
